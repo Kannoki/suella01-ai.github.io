@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getProductBySlug, updateProduct, deleteProduct } from '../../../lib/dataService';
+import { requireAuth } from '../../../lib/auth';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { id } = req.query;
@@ -22,6 +23,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   if (req.method === 'PUT') {
+    if (!(await requireAuth(req, res))) return;
+
     try {
       const updated = await updateProduct(idStr, req.body);
       if (!updated) {
@@ -34,6 +37,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   if (req.method === 'DELETE') {
+    if (!(await requireAuth(req, res))) return;
+
     try {
       const deleted = await deleteProduct(idStr);
       return res.status(200).json({ success: deleted });

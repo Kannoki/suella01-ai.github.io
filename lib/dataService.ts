@@ -68,8 +68,22 @@ export interface AboutProfile {
   name: string;
   tagline: string;
   bio: string;
+  image?: string | null;
   photoUrl?: string | null;
   timeline: TimelineItem[];
+}
+
+export interface User {
+  id: string;
+  name?: string | null;
+  email?: string | null;
+  image?: string | null; // Base64 encoded or URL
+  tagline?: string | null;
+  bio?: string | null;
+  role?: string;
+  timeline?: TimelineItem[];
+  createdAt?: string | Date;
+  updatedAt?: string | Date;
 }
 
 export interface ContactInfo {
@@ -112,8 +126,18 @@ function loadJsonSeed<T>(filename: string, fallback: T): T {
   return fallback;
 }
 
+function saveJsonSeed<T>(filename: string, data: T): void {
+  try {
+    const filePath = path.join(process.cwd(), 'data', 'seeds', filename);
+    fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf-8');
+  } catch (e) {
+    console.warn(`Could not save seed ${filename}:`, e);
+  }
+}
+
 // In-memory fallback stores for when DB is unreachable
 let inMemoryActivities: Activity[] = [];
+let inMemoryUsers: User[] = [];
 let inMemoryProducts: Product[] = [];
 let inMemoryCarousel: CarouselSlide[] = [];
 let inMemoryAbout: AboutProfile | null = null;
@@ -122,6 +146,9 @@ let inMemoryRegistrations: Registration[] = [];
 let inMemoryMessages: ContactMessage[] = [];
 
 function initFallbackStores() {
+  if (inMemoryUsers.length === 0) {
+    inMemoryUsers = loadJsonSeed<User[]>('users.json', []);
+  }
   if (inMemoryActivities.length === 0) {
     inMemoryActivities = loadJsonSeed<Activity[]>('activities.json', []);
   }
@@ -605,34 +632,61 @@ export async function deleteCarouselSlide(id: string): Promise<boolean> {
   return inMemoryCarousel.length < before;
 }
 
-// ----------------- ABOUT & TIMELINE -----------------
+// ----------------- USERS CRUD -----------------
 
-export async function getAboutProfile(): Promise<AboutProfile> {
+function normalizeTimeline(raw: any): TimelineItem[] {
+  if (Array.isArray(raw)) return raw as TimelineItem[];
+  if (typeof raw === 'string') {
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) return parsed as TimelineItem[];
+    } catch {}
+  }
+  return [];
+}
+
+export async function getUsers(): Promise<User[]> {
   try {
-    const profile = await prisma.aboutProfile.findFirst({
-      include: {
-        timelines: {
-          orderBy: { startYear: 'desc' },
-        },
-      },
+    const users = await prisma.user.findMany({
+      orderBy: { createdAt: 'asc' },
     });
+    return users.map((u: any) => ({
+      id: u.id,
+      name: u.name,
+      email: u.email,
+      image: u.image,
+      tagline: u.tagline,
+      bio: u.bio,
+      role: u.role || 'user',
+      timeline: normalizeTimeline(u.timeline),
+      createdAt: u.createdAt,
+      updatedAt: u.updatedAt,
+    }));
+  } catch (err) {
+    // Fallback
+  }
 
-    if (profile) {
+  initFallbackStores();
+  return inMemoryUsers;
+}
+
+export async function getUserById(id: string): Promise<User | null> {
+  try {
+    const u: any = await prisma.user.findUnique({
+      where: { id },
+    });
+    if (u) {
       return {
-        id: profile.id,
-        name: profile.name,
-        tagline: profile.tagline,
-        bio: profile.bio,
-        photoUrl: profile.photoUrl,
-        timeline: profile.timelines.map((t) => ({
-          id: t.id,
-          startYear: t.startYear,
-          endYear: t.endYear,
-          title: t.title,
-          institution: t.institution,
-          description: t.description,
-          order: t.order,
-        })),
+        id: u.id,
+        name: u.name,
+        email: u.email,
+        image: u.image,
+        tagline: u.tagline,
+        bio: u.bio,
+        role: u.role || 'user',
+        timeline: normalizeTimeline(u.timeline),
+        createdAt: u.createdAt,
+        updatedAt: u.updatedAt,
       };
     }
   } catch (err) {
@@ -640,49 +694,239 @@ export async function getAboutProfile(): Promise<AboutProfile> {
   }
 
   initFallbackStores();
-  return inMemoryAbout!;
+  return inMemoryUsers.find((u) => u.id === id) || null;
 }
 
-export async function updateAboutProfile(data: Partial<AboutProfile>): Promise<AboutProfile> {
+export async function getUserByEmail(email: string): Promise<User | null> {
   try {
-    let profile = await prisma.aboutProfile.findFirst();
-    if (profile) {
-      profile = await prisma.aboutProfile.update({
-        where: { id: profile.id },
-        data: {
-          name: data.name ?? profile.name,
-          tagline: data.tagline ?? profile.tagline,
-          bio: data.bio ?? profile.bio,
-          photoUrl: data.photoUrl ?? profile.photoUrl,
-        },
-      });
-    } else {
-      profile = await prisma.aboutProfile.create({
-        data: {
-          name: data.name || 'MINH NGOC',
-          tagline: data.tagline || 'Mechanical Engineering Student',
-          bio: data.bio || '',
-          photoUrl: data.photoUrl || '',
-        },
-      });
+    const u: any = await prisma.user.findUnique({
+      where: { email },
+    });
+    if (u) {
+      return {
+        id: u.id,
+        name: u.name,
+        email: u.email,
+        image: u.image,
+        tagline: u.tagline,
+        bio: u.bio,
+        role: u.role || 'user',
+        timeline: normalizeTimeline(u.timeline),
+        createdAt: u.createdAt,
+        updatedAt: u.updatedAt,
+      };
     }
-    return getAboutProfile();
   } catch (err) {
     // Fallback
   }
 
   initFallbackStores();
-  if (inMemoryAbout) {
-    inMemoryAbout = {
-      ...inMemoryAbout,
-      name: data.name ?? inMemoryAbout.name,
-      tagline: data.tagline ?? inMemoryAbout.tagline,
-      bio: data.bio ?? inMemoryAbout.bio,
-      photoUrl: data.photoUrl ?? inMemoryAbout.photoUrl,
-      timeline: data.timeline ?? inMemoryAbout.timeline,
+  return inMemoryUsers.find((u) => u.email === email) || null;
+}
+
+export async function createUser(data: Partial<User>): Promise<User> {
+  const newId = data.id || `usr-${Date.now()}`;
+  const timelineVal = Array.isArray(data.timeline) ? data.timeline : [];
+
+  try {
+    const created: any = await prisma.user.create({
+      data: {
+        id: newId,
+        name: data.name || '',
+        email: data.email || null,
+        image: data.image || null,
+        tagline: data.tagline || null,
+        bio: data.bio || null,
+        role: data.role || 'user',
+        timeline: timelineVal as any,
+      },
+    });
+    return {
+      id: created.id,
+      name: created.name,
+      email: created.email,
+      image: created.image,
+      tagline: created.tagline,
+      bio: created.bio,
+      role: created.role,
+      timeline: normalizeTimeline(created.timeline),
+      createdAt: created.createdAt,
+      updatedAt: created.updatedAt,
+    };
+  } catch (err) {
+    // Fallback
+  }
+
+  initFallbackStores();
+  const newUser: User = {
+    id: newId,
+    name: data.name || '',
+    email: data.email || null,
+    image: data.image || null,
+    tagline: data.tagline || null,
+    bio: data.bio || null,
+    role: data.role || 'user',
+    timeline: timelineVal,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+  inMemoryUsers.push(newUser);
+  saveJsonSeed('users.json', inMemoryUsers);
+  return newUser;
+}
+
+export async function updateUser(id: string, data: Partial<User>): Promise<User> {
+  const timelineVal = data.timeline !== undefined ? (Array.isArray(data.timeline) ? data.timeline : []) : undefined;
+
+  try {
+    const updated: any = await prisma.user.update({
+      where: { id },
+      data: {
+        name: data.name !== undefined ? data.name : undefined,
+        email: data.email !== undefined ? data.email : undefined,
+        image: data.image !== undefined ? data.image : undefined,
+        tagline: data.tagline !== undefined ? data.tagline : undefined,
+        bio: data.bio !== undefined ? data.bio : undefined,
+        role: data.role !== undefined ? data.role : undefined,
+        timeline: timelineVal !== undefined ? (timelineVal as any) : undefined,
+      },
+    });
+    return {
+      id: updated.id,
+      name: updated.name,
+      email: updated.email,
+      image: updated.image,
+      tagline: updated.tagline,
+      bio: updated.bio,
+      role: updated.role,
+      timeline: normalizeTimeline(updated.timeline),
+      createdAt: updated.createdAt,
+      updatedAt: updated.updatedAt,
+    };
+  } catch (err) {
+    // Fallback
+  }
+
+  initFallbackStores();
+  const idx = inMemoryUsers.findIndex((u) => u.id === id);
+  if (idx >= 0) {
+    inMemoryUsers[idx] = {
+      ...inMemoryUsers[idx],
+      name: data.name !== undefined ? data.name : inMemoryUsers[idx].name,
+      email: data.email !== undefined ? data.email : inMemoryUsers[idx].email,
+      image: data.image !== undefined ? data.image : inMemoryUsers[idx].image,
+      tagline: data.tagline !== undefined ? data.tagline : inMemoryUsers[idx].tagline,
+      bio: data.bio !== undefined ? data.bio : inMemoryUsers[idx].bio,
+      role: data.role !== undefined ? data.role : inMemoryUsers[idx].role,
+      timeline: timelineVal !== undefined ? timelineVal : inMemoryUsers[idx].timeline,
+      updatedAt: new Date().toISOString(),
+    };
+    saveJsonSeed('users.json', inMemoryUsers);
+    return inMemoryUsers[idx];
+  }
+
+  // If not found in memory, create it
+  return createUser({ ...data, id });
+}
+
+export async function deleteUser(id: string): Promise<boolean> {
+  try {
+    await prisma.user.delete({ where: { id } });
+    return true;
+  } catch (err) {
+    // Fallback
+  }
+
+  initFallbackStores();
+  const before = inMemoryUsers.length;
+  inMemoryUsers = inMemoryUsers.filter((u) => u.id !== id);
+  if (inMemoryUsers.length < before) {
+    saveJsonSeed('users.json', inMemoryUsers);
+    return true;
+  }
+  return false;
+}
+
+// ----------------- ABOUT & PROFILE (Backed by Primary User) -----------------
+
+export async function getAboutProfile(): Promise<AboutProfile> {
+  const users = await getUsers();
+  const primary =
+    users.find((u) => u.role === 'admin') ||
+    users.find((u) => u.name?.toUpperCase().includes('MINH NGOC')) ||
+    users[0];
+
+  if (primary) {
+    return {
+      id: primary.id,
+      name: primary.name || 'MINH NGOC',
+      tagline: primary.tagline || 'Mechanical Engineering Student & STEM Advocate',
+      bio: primary.bio || '',
+      image: primary.image,
+      photoUrl: primary.image,
+      timeline: primary.timeline || [],
     };
   }
-  return inMemoryAbout!;
+
+  initFallbackStores();
+  return {
+    name: 'MINH NGOC',
+    tagline: 'Mechanical Engineering Student & STEM Advocate',
+    bio: 'A passionate mechanical engineering student exploring mechanics, robotics, and tech.',
+    image: null,
+    photoUrl: null,
+    timeline: [],
+  };
+}
+
+export async function updateAboutProfile(data: Partial<AboutProfile>): Promise<AboutProfile> {
+  const users = await getUsers();
+  const primary =
+    users.find((u) => u.role === 'admin') ||
+    users.find((u) => u.name?.toUpperCase().includes('MINH NGOC')) ||
+    users[0];
+
+  const imageVal = data.image !== undefined ? data.image : data.photoUrl;
+
+  if (primary) {
+    const updated = await updateUser(primary.id, {
+      name: data.name,
+      tagline: data.tagline,
+      bio: data.bio,
+      image: imageVal,
+      timeline: data.timeline,
+    });
+    return {
+      id: updated.id,
+      name: updated.name || 'MINH NGOC',
+      tagline: updated.tagline || 'Mechanical Engineering Student & STEM Advocate',
+      bio: updated.bio || '',
+      image: updated.image,
+      photoUrl: updated.image,
+      timeline: updated.timeline || [],
+    };
+  }
+
+  // If no user exists yet, create primary user
+  const created = await createUser({
+    name: data.name || 'MINH NGOC',
+    email: 'admin@mechgirl.com',
+    role: 'admin',
+    tagline: data.tagline || 'Mechanical Engineering Student & STEM Advocate',
+    bio: data.bio || '',
+    image: imageVal,
+    timeline: data.timeline || [],
+  });
+
+  return {
+    id: created.id,
+    name: created.name || 'MINH NGOC',
+    tagline: created.tagline || '',
+    bio: created.bio || '',
+    image: created.image,
+    photoUrl: created.image,
+    timeline: created.timeline || [],
+  };
 }
 
 // ----------------- CONTACT & MESSAGES -----------------

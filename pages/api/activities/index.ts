@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getActivities, createActivity } from '../../../lib/dataService';
+import { requireAuth } from '../../../lib/auth';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method === 'GET') {
@@ -12,6 +13,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   if (req.method === 'POST') {
+    if (!(await requireAuth(req, res))) return;
+
     try {
       const newActivity = await createActivity(req.body);
       return res.status(201).json(newActivity);

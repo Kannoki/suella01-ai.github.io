@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { Product } from '../../lib/dataService';
+import { getAuthHeaders } from '../../lib/clientAuth';
 
 interface ProductFormProps {
   initialData?: Product | null;
@@ -46,7 +47,7 @@ export default function ProductForm({ initialData, isNew = false }: ProductFormP
 
       const res = await fetch(url, {
         method,
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify(payload),
       });
 
@@ -67,6 +68,7 @@ export default function ProductForm({ initialData, isNew = false }: ProductFormP
     try {
       await fetch(`/api/products/${initialData?.id || initialData?.slug}`, {
         method: 'DELETE',
+        headers: getAuthHeaders(),
       });
       router.push('/admin');
     } catch {

@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { deleteCarouselSlide } from '../../../lib/dataService';
+import { requireAuth } from '../../../lib/auth';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { id } = req.query;
@@ -13,6 +14,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (!idStr) {
     return res.status(400).json({ error: 'Missing slide ID' });
   }
+
+  if (!(await requireAuth(req, res))) return;
 
   try {
     const deleted = await deleteCarouselSlide(idStr);

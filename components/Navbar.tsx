@@ -16,6 +16,7 @@ export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const isActive = (path: string) => {
+    if (!router?.pathname) return false;
     if (path === '/') return router.pathname === '/';
     return router.pathname.startsWith(path);
   };

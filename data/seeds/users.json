@@ -1,0 +1,51 @@
+[
+  {
+    "id": "user-1",
+    "name": "MINH NGOC",
+    "email": "admin@mechgirl.com",
+    "role": "admin",
+    "tagline": "Mechanical Engineering Student & STEM Advocate",
+    "bio": "A passionate mechanical engineering student exploring mechanics, robotics, and tech. Sharing advanced engineering resources and connecting the next generation of creative minds in STEM.",
+    "image": "https://s160-26-ava-talk.zadn.vn/10/c404dafda064d35143f91abcee510172.jpg?key=Ub0NmSB86oozE7OCY3VA6g&time=1791081893",
+    "timeline": [
+      {
+        "id": "tl-1",
+        "startYear": 2024,
+        "endYear": 2027,
+        "title": "B.Sc. Mechanical Engineering",
+        "institution": "Stanford University",
+        "description": "Specializing in autonomous robotics, dynamic controls, and precision mechanics.",
+        "order": 1
+      },
+      {
+        "id": "tl-2",
+        "startYear": 2021,
+        "endYear": 2023,
+        "title": "High School Diploma",
+        "institution": "STEM Academy",
+        "description": "Focus on advanced mathematics, robotics clubs, and physics.",
+        "order": 2
+      }
+    ]
+  },
+  {
+    "id": "user-2",
+    "name": "Sarah Chen",
+    "email": "sarah.chen@mechgirl.com",
+    "role": "author",
+    "tagline": "Mechatronics Engineer & Robotics Contributor",
+    "bio": "Working on autonomous navigation, computer vision, and ROS2 packages for mobile robotics.",
+    "image": "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=400",
+    "timeline": [
+      {
+        "id": "tl-3",
+        "startYear": 2022,
+        "endYear": 2025,
+        "title": "M.Sc. Robotics & Automation",
+        "institution": "Tech Institute",
+        "description": "Path planning algorithms and embedded systems.",
+        "order": 1
+      }
+    ]
+  }
+]

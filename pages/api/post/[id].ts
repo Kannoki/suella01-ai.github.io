@@ -1,26 +1,27 @@
-import type { NextApiRequest, NextApiResponse } from 'next'
-import { getSession } from 'next-auth/react';
-import prisma from '../../../lib/prisma'
-
+import type { NextApiRequest, NextApiResponse } from 'next';
+import prisma from '../../../lib/prisma';
+import { requireAuth } from '../../../lib/auth';
 
 // DELETE /api/post/:id
 export default async function handle(req: NextApiRequest, res: NextApiResponse) {
+  if (req.method !== 'DELETE') {
+    res.setHeader('Allow', ['DELETE']);
+    return res.status(405).end(`Method ${req.method} Not Allowed`);
+  }
+
   const postId = req.query.id;
+  if (!postId) {
+    return res.status(400).json({ error: 'Missing post ID' });
+  }
 
-  const session = await getSession({ req })
+  if (!(await requireAuth(req, res))) return;
 
-  if (req.method === "DELETE") {
-    if (session) {
-      const post = await prisma.post.delete({
-        where: { id: String(postId) },
-      });
-      res.json(post);
-    } else {
-      res.status(401).send({ message: 'Unauthorized' })
-    }
-  } else {
-    throw new Error(
-      `The HTTP ${req.method} method is not supported at this route.`
-    );
+  try {
+    const post = await prisma.post.delete({
+      where: { id: String(postId) },
+    });
+    return res.status(200).json(post);
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message || 'Failed to delete post' });
   }
 }

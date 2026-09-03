@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getRegistrations, deleteRegistration } from '../../../lib/dataService';
+import { requireAuth } from '../../../lib/auth';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method === 'GET') {
@@ -12,6 +13,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   if (req.method === 'DELETE') {
+    if (!(await requireAuth(req, res))) return;
+
     const { id } = req.query;
     const idStr = Array.isArray(id) ? id[0] : id;
     if (!idStr) {

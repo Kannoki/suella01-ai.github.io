@@ -93,7 +93,7 @@ interface AboutProps {
 }
 
 export default function About({ profile }: AboutProps) {
-  const { name, tagline, bio, photoUrl, timeline = [] } = profile;
+  const { name, tagline, bio, image, photoUrl, timeline = [] } = profile;
 
   return (
     <Layout
@@ -104,7 +104,7 @@ export default function About({ profile }: AboutProps) {
         {/* Profile Card Header */}
         <AnimatedSection>
           <div className="bg-white rounded-3xl p-8 md:p-12 border border-gray-100 shadow-soft flex flex-col md:flex-row items-center gap-10">
-            <PhotoFrame src={photoUrl} name={name} />
+            <PhotoFrame src={image || photoUrl} name={name} />
 
             <div className="flex-1 text-center md:text-left space-y-4">
               <span className="text-xs font-semibold uppercase tracking-widest text-purple-700 bg-pastelPurple/40 px-4 py-1.5 rounded-full border border-purple-200/40">

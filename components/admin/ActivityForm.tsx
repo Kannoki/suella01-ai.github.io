@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { Activity } from '../../lib/dataService';
+import { getAuthHeaders } from '../../lib/clientAuth';
 
 interface ActivityFormProps {
   initialData?: Activity | null;
@@ -38,7 +39,7 @@ export default function ActivityForm({ initialData, isNew = false }: ActivityFor
 
       const res = await fetch(url, {
         method,
-        headers: { 'Content-Type': 'application/json' },
+        headers: getAuthHeaders(),
         body: JSON.stringify(form),
       });
 
@@ -59,6 +60,7 @@ export default function ActivityForm({ initialData, isNew = false }: ActivityFor
     try {
       await fetch(`/api/activities/${initialData?.id || initialData?.slug}`, {
         method: 'DELETE',
+        headers: getAuthHeaders(),
       });
       router.push('/admin');
     } catch {

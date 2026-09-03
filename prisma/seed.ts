@@ -10,21 +10,6 @@ const prisma = new PrismaClient({
   adapter,
 });
 
-const userData: Prisma.UserCreateInput[] = [
-  {
-    name: 'Admin User',
-    email: 'admin@mechgirl.com',
-    posts: {
-      create: [
-        {
-          title: 'Welcome to MechGirl STEM Platform',
-          content: 'An open engineering platform designed to inspire and empower women in mechanical engineering.',
-          published: true,
-        },
-      ],
-    },
-  },
-];
 
 function readSeed<T>(filename: string): T | null {
   try {
@@ -41,14 +26,32 @@ function readSeed<T>(filename: string): T | null {
 async function main() {
   console.log(`Start seeding MechGirl STEM website database...`);
 
-  // Seed Users & Initial Post
-  for (const u of userData) {
+  // Seed Users
+  const users = readSeed<any[]>('users.json') || [];
+  for (const u of users) {
     await prisma.user.upsert({
-      where: { email: u.email! },
-      update: {},
-      create: u,
+      where: { email: u.email },
+      update: {
+        name: u.name,
+        tagline: u.tagline,
+        bio: u.bio,
+        image: u.image,
+        role: u.role || 'user',
+        timeline: u.timeline || [],
+      },
+      create: {
+        id: u.id,
+        name: u.name,
+        email: u.email,
+        tagline: u.tagline,
+        bio: u.bio,
+        image: u.image,
+        role: u.role || 'user',
+        timeline: u.timeline || [],
+      },
     });
   }
+  console.log(`Seeded ${users.length} users.`);
 
   // Seed Activities
   const activities = readSeed<any[]>('activities.json') || [];
@@ -140,47 +143,6 @@ async function main() {
     });
   }
   console.log(`Seeded ${carousel.length} carousel slides.`);
-
-  // Seed About Profile & Timelines
-  const about = readSeed<any>('about.json');
-  if (about) {
-    let profile = await prisma.aboutProfile.findFirst();
-    if (!profile) {
-      profile = await prisma.aboutProfile.create({
-        data: {
-          name: about.name || 'MINH NGOC',
-          tagline: about.tagline || 'Mechanical Engineering Student',
-          bio: about.bio || '',
-          photoUrl: about.photoUrl || '',
-        },
-      });
-    }
-
-    if (about.timeline && Array.isArray(about.timeline)) {
-      for (const t of about.timeline) {
-        await prisma.timelineItem.upsert({
-          where: { id: t.id },
-          update: {
-            startYear: t.startYear,
-            endYear: t.endYear,
-            title: t.title,
-            institution: t.institution,
-            description: t.description,
-          },
-          create: {
-            id: t.id,
-            profileId: profile.id,
-            startYear: t.startYear,
-            endYear: t.endYear,
-            title: t.title,
-            institution: t.institution,
-            description: t.description,
-          },
-        });
-      }
-    }
-    console.log(`Seeded about profile and timeline.`);
-  }
 
   // Seed Contact Info
   const contact = readSeed<any>('contact.json');

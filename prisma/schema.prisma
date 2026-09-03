@@ -56,7 +56,11 @@ model User {
   name          String?
   email         String?   @unique
   emailVerified DateTime? @map("email_verified")
-  image         String?
+  image         String?   @db.Text // Base64 encoded profile image or URL
+  tagline       String?
+  bio           String?   @db.Text
+  role          String    @default("user") // "admin" | "author" | "user"
+  timeline      Json      @default("[]") // Array of objects: [{ id, startYear, endYear, title, institution, description, order }]
   createdAt     DateTime  @default(now()) @map(name: "created_at")
   updatedAt     DateTime  @updatedAt @map(name: "updated_at")
   posts         Post[]
@@ -145,35 +149,6 @@ model CarouselSlide {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("carousel_slides")
-}
-
-model AboutProfile {
-  id        String         @id @default(cuid())
-  name      String
-  tagline   String
-  bio       String         @db.Text
-  photoUrl  String?        @map("photo_url")
-  createdAt DateTime       @default(now()) @map("created_at")
-  updatedAt DateTime       @updatedAt @map("updated_at")
-  timelines TimelineItem[]
-
-  @@map("about_profiles")
-}
-
-model TimelineItem {
-  id          String        @id @default(cuid())
-  profileId   String?       @map("profile_id")
-  profile     AboutProfile? @relation(fields: [profileId], references: [id], onDelete: Cascade)
-  startYear   Int           @map("start_year")
-  endYear     Int?          @map("end_year")
-  title       String
-  institution String
-  description String
-  order       Int           @default(0)
-  createdAt   DateTime      @default(now()) @map("created_at")
-  updatedAt   DateTime      @updatedAt @map("updated_at")
-
-  @@map("timeline_items")
 }
 
 model ContactInfo {

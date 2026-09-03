@@ -1,25 +1,37 @@
-import type { NextApiRequest, NextApiResponse } from 'next'
-import prisma from '../../../lib/prisma'
-import { getSession } from 'next-auth/react'
+import type { NextApiRequest, NextApiResponse } from 'next';
+import prisma from '../../../lib/prisma';
+import { getSession } from 'next-auth/react';
+import { checkAuth } from '../../../lib/auth';
 
-
-// POST /api/post
-// Required fields in body: title
-// Optional fields in body: content
 export default async function handle(req: NextApiRequest, res: NextApiResponse) {
+  if (req.method !== 'POST') {
+    res.setHeader('Allow', ['POST']);
+    return res.status(405).end(`Method ${req.method} Not Allowed`);
+  }
+
+  const isAuthed = await checkAuth(req);
+  if (!isAuthed) {
+    return res.status(401).json({ error: 'Unauthorized: Authentication required to create post.' });
+  }
+
   const { title, content } = req.body;
+  if (!title) {
+    return res.status(400).json({ error: 'Title is required' });
+  }
 
   const session = await getSession({ req });
-  if (session) {
+  const authorEmail = session?.user?.email;
+
+  try {
     const result = await prisma.post.create({
       data: {
-        title: title,
-        content: content,
-        author: { connect: { email: session?.user?.email } },
+        title,
+        content: content || '',
+        ...(authorEmail ? { author: { connect: { email: authorEmail } } } : {}),
       },
     });
-    res.json(result);
-  } else {
-    res.status(401).send({ message: 'Unauthorized' })
+    return res.status(201).json(result);
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message || 'Failed to create post' });
   }
 }
