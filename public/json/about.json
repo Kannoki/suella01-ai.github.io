@@ -1,0 +1,24 @@
+{
+  "name": "MINH NGOC",
+  "tagline": "Mechanical Engineering Student",
+  "bio": "A passionate mechanical engineering student exploring mechanics, robotics, and tech. Sharing advanced engineering resources and connecting the next generation of creative minds in STEM.",
+  "photoUrl": "https://s160-26-ava-talk.zadn.vn/10/c404dafda064d35143f91abcee510172.jpg?key=Ub0NmSB86oozE7OCY3VA6g&time=1791081893",
+  "timeline": [
+    {
+      "id": "edu-2",
+      "startYear": 2024,
+      "endYear": 2027,
+      "title": "B.Sc. Mechanical Engineering",
+      "institution": "University Name",
+      "description": "Core studies in thermodynamics, fluid mechanics, robotics, and manufacturing."
+    },
+    {
+      "id": "edu-1",
+      "startYear": 2021,
+      "endYear": 2023,
+      "title": "High School Diploma",
+      "institution": "High School Name",
+      "description": "Mathematical sciences focus with physics and introductory engineering."
+    }
+  ]
+}

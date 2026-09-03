@@ -1,5 +1,5 @@
 import React from "react";
-import type { GetStaticProps } from "next";
+import type { GetServerSideProps } from "next";
 import ReactMarkdown from "react-markdown";
 import Layout from "../../components/Layout";
 import Router from "next/router";
@@ -7,21 +7,29 @@ import { PostProps } from "../../components/Post";
 import prisma from '../../lib/prisma'
 import { useSession } from "next-auth/react";
 
-export const getStaticProps: GetStaticProps = async ({ params }) => {
-  const post = await prisma.post.findUnique({
-    where: {
-      id: String(params?.id) ,
-    },
-    include: {
-      author: {
-        select: { name: true, email: true },
+export const getServerSideProps: GetServerSideProps = async ({ params }) => {
+  try {
+    const post = await prisma.post.findUnique({
+      where: {
+        id: String(params?.id),
       },
-    },
-  });
-  return {
-    props: post,
-    revalidate: 10,
-  };
+      include: {
+        author: {
+          select: { name: true, email: true },
+        },
+      },
+    });
+
+    if (!post) {
+      return { notFound: true };
+    }
+
+    return {
+      props: post,
+    };
+  } catch {
+    return { notFound: true };
+  }
 };
 
 async function publishPost(id: number): Promise<void> {

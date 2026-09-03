@@ -74,3 +74,135 @@ model VerificationToken {
   @@unique([identifier, token])
   @@map("verificationtokens")
 }
+
+// ----------------------------------------------------
+// Expanded Domain Models for New MechGirl STEM Website
+// ----------------------------------------------------
+
+model Activity {
+  id            String         @id @default(cuid())
+  title         String
+  slug          String         @unique
+  type          String         @default("Workshop") // Workshop, Challenge, Masterclass, Panel
+  date          String
+  time          String?
+  location      String?
+  description   String
+  content       String?        @db.Text
+  image         String?
+  seats         Int            @default(0)
+  registered    Int            @default(0)
+  status        String         @default("open") // open, full, closed
+  featured      Boolean        @default(false)
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+  registrations Registration[]
+
+  @@map("activities")
+}
+
+model Registration {
+  id         String   @id @default(cuid())
+  name       String
+  email      String
+  phone      String
+  address    String?
+  notes      String?
+  activityId String   @map("activity_id")
+  activity   Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@map("registrations")
+}
+
+model Product {
+  id          String   @id @default(cuid())
+  title       String
+  slug        String   @unique
+  category    String   @default("Robotics") // Robotics, Knowledge, IoT, Mechatronics
+  description String
+  content     String?  @db.Text
+  image       String?
+  github      String?
+  demo        String?
+  tags        String[] @default([])
+  featured    Boolean  @default(false)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("products")
+}
+
+model CarouselSlide {
+  id        String   @id @default(cuid())
+  src       String
+  alt       String?
+  title     String?
+  subtitle  String?
+  order     Int      @default(0)
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("carousel_slides")
+}
+
+model AboutProfile {
+  id        String         @id @default(cuid())
+  name      String
+  tagline   String
+  bio       String         @db.Text
+  photoUrl  String?        @map("photo_url")
+  createdAt DateTime       @default(now()) @map("created_at")
+  updatedAt DateTime       @updatedAt @map("updated_at")
+  timelines TimelineItem[]
+
+  @@map("about_profiles")
+}
+
+model TimelineItem {
+  id          String        @id @default(cuid())
+  profileId   String?       @map("profile_id")
+  profile     AboutProfile? @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  startYear   Int           @map("start_year")
+  endYear     Int?          @map("end_year")
+  title       String
+  institution String
+  description String
+  order       Int           @default(0)
+  createdAt   DateTime      @default(now()) @map("created_at")
+  updatedAt   DateTime      @updatedAt @map("updated_at")
+
+  @@map("timeline_items")
+}
+
+model ContactInfo {
+  id        String   @id @default(cuid())
+  name      String
+  tagline   String
+  email     String
+  phone     String?
+  address   String?
+  about     String?  @db.Text
+  facebook  String?
+  youtube   String?
+  github    String?
+  instagram String?
+  linkedin  String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("contact_info")
+}
+
+model ContactMessage {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  subject   String?
+  message   String   @db.Text
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("contact_messages")
+}

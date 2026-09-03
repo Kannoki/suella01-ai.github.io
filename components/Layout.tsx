@@ -1,50 +1,42 @@
-import React, { ReactNode } from "react";
-import Header from "./Header";
+import React from 'react';
+import Head from 'next/head';
+import Navbar from './Navbar';
+import Footer from './Footer';
 
-type Props = {
-  children: ReactNode;
-};
+interface LayoutProps {
+  children: React.ReactNode;
+  title?: string;
+  description?: string;
+}
 
-const Layout: React.FC<Props> = (props) => (
-  <div>
-    <Header />
-    <div className="layout">{props.children}</div>
-    <style jsx global>{`
-      html {
-        box-sizing: border-box;
-      }
+export default function Layout({
+  children,
+  title = 'MechGirl - Where Women Master Mechanics & Tech',
+  description = 'An open engineering platform designed to inspire and empower women in mechanical design, robotics, and technology.',
+}: LayoutProps) {
+  return (
+    <div className="min-h-screen flex flex-col bg-brandBg text-brandDark">
+      <Head>
+        <title>{title}</title>
+        <meta name="description" content={description} />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <link rel="icon" href="/favicon.ico" />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        {/* eslint-disable-next-line @next/next/no-page-custom-font */}
+        <link
+          href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,600;1,400&display=swap"
+          rel="stylesheet"
+        />
+      </Head>
 
-      *,
-      *:before,
-      *:after {
-        box-sizing: inherit;
-      }
+      <Navbar />
 
-      body {
-        margin: 0;
-        padding: 0;
-        font-size: 16px;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-          Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji",
-          "Segoe UI Symbol";
-        background: rgba(0, 0, 0, 0.05);
-      }
+      <main className="flex-1 w-full">
+        {children}
+      </main>
 
-      input,
-      textarea {
-        font-size: 16px;
-      }
-
-      button {
-        cursor: pointer;
-      }
-    `}</style>
-    <style jsx>{`
-      .layout {
-        padding: 0 2rem;
-      }
-    `}</style>
-  </div>
-);
-
-export default Layout;
+      <Footer />
+    </div>
+  );
+}

@@ -1,0 +1,74 @@
+[
+  {
+    "id": "prod-001",
+    "title": "3-DOF Robotic Arm",
+    "slug": "3-dof-robotic-arm",
+    "category": "Robotics",
+    "description": "An automated sorting system powered by Arduino Nano and a TCS3200 color sensor. Capable of sorting objects by color with 3 degrees of freedom for precise manipulation.",
+    "image": "https://images.unsplash.com/photo-1561557944-6e7860d1a7eb?w=600&q=80",
+    "github": "https://github.com/mechgirl/3dof-arm",
+    "demo": "",
+    "tags": ["Arduino", "Robotics", "Automation"],
+    "featured": true
+  },
+  {
+    "id": "prod-002",
+    "title": "Obstacle Avoiding Robot",
+    "slug": "obstacle-avoiding-robot",
+    "category": "Robotics",
+    "description": "A STEM educational robot designed for middle school students. Utilizes ultrasonic sensors for real-time obstacle detection and autonomous navigation.",
+    "image": "https://images.unsplash.com/photo-1485827404703-89b55fcc595e?w=600&q=80",
+    "github": "https://github.com/mechgirl/obstacle-bot",
+    "demo": "https://youtube.com/watch?v=example",
+    "tags": ["Education", "STEM", "Ultrasonic"],
+    "featured": true
+  },
+  {
+    "id": "prod-003",
+    "title": "SolidWorks 3D Modeling Library",
+    "slug": "solidworks-3d-modeling-library",
+    "category": "Knowledge",
+    "description": "A comprehensive library of SolidWorks models for FTC and FRC teams. Includes drivetrain components, mechanism mounts, and standard structural parts.",
+    "image": "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=600&q=80",
+    "github": "https://github.com/mechgirl/sw-library",
+    "demo": "",
+    "tags": ["SolidWorks", "CAD", "FTC", "FRC"],
+    "featured": true
+  },
+  {
+    "id": "prod-004",
+    "title": "Mecanum vs Tank Drive Analysis",
+    "slug": "mecanum-vs-tank-drive-analysis",
+    "category": "Knowledge",
+    "description": "In-depth technical analysis comparing mecanum and tank drive systems. Includes pros/cons, cost breakdown, maintenance comparison, and use-case recommendations.",
+    "image": "https://images.unsplash.com/photo-1565043666747-69f6646db940?w=600&q=80",
+    "github": "https://github.com/mechgirl/drive-analysis",
+    "demo": "",
+    "tags": ["Drive System", "Analysis", "Competition"],
+    "featured": false
+  },
+  {
+    "id": "prod-005",
+    "title": "Smart Weather Station",
+    "slug": "smart-weather-station",
+    "category": "IoT",
+    "description": "An ESP32-based weather station that monitors temperature, humidity, pressure, and air quality. Data is streamed to a cloud dashboard for real-time monitoring.",
+    "image": "https://images.unsplash.com/photo-1504608524841-42584120d693?w=600&q=80",
+    "github": "https://github.com/mechgirl/weather-station",
+    "demo": "https://thingspeak.com/channels/example",
+    "tags": ["ESP32", "IoT", "Sensors"],
+    "featured": false
+  },
+  {
+    "id": "prod-006",
+    "title": "CNC Pen Plotter",
+    "slug": "cnc-pen-plotter",
+    "category": "Mechatronics",
+    "description": "A desktop CNC pen plotter built from 3D printed parts and stepper motors. Draws SVG files with high precision. Great for learning CNC fundamentals.",
+    "image": "https://images.unsplash.com/photo-1612831819720-28dc994fa96d?w=600&q=80",
+    "github": "https://github.com/mechgirl/pen-plotter",
+    "demo": "",
+    "tags": ["CNC", "Plotter", "3D Printed"],
+    "featured": false
+  }
+]
