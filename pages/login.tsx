@@ -42,6 +42,91 @@ const AdminIcon = () => (
   </svg>
 );
 
+// ─── Sub-components (must be at module scope — NOT inside LoginPage —
+//     otherwise React sees a new component type on every render, which
+//     unmounts + remounts inputs causing them to lose focus on each keystroke)
+
+function ModeToggle({ mode, switchMode }: { mode: Mode; switchMode: (m: Mode) => void }) {
+  return (
+    <div className="flex p-1 bg-gray-100/80 rounded-full gap-1">
+      {(['signin', 'signup'] as Mode[]).map((m) => (
+        <button
+          key={m}
+          type="button"
+          onClick={() => switchMode(m)}
+          className={`flex-1 py-1.5 px-4 rounded-full text-xs font-semibold tracking-wide transition-all duration-200 ${
+            mode === m
+              ? 'bg-white text-brandDark shadow-sm'
+              : 'text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          {m === 'signin' ? 'Sign In' : 'Sign Up'}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function ErrorAlert({ msg }: { msg: string }) {
+  return (
+    <div className="p-3.5 rounded-2xl bg-red-50 border border-red-200 text-xs text-red-700 flex items-center gap-2">
+      <svg className="w-4 h-4 text-red-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+      <span>{msg}</span>
+    </div>
+  );
+}
+
+function SuccessAlert({ msg }: { msg: string }) {
+  return (
+    <div className="p-3.5 rounded-2xl bg-green-50 border border-green-200 text-xs text-green-700 flex items-center gap-2">
+      <svg className="w-4 h-4 text-green-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+      <span>{msg}</span>
+    </div>
+  );
+}
+
+interface FieldProps {
+  label: string;
+  id: string;
+  type?: string;
+  placeholder?: string;
+  value: string;
+  onChange: (v: string) => void;
+  autoComplete?: string;
+  trailing?: React.ReactNode;
+}
+
+function Field({ label, id, type = 'text', placeholder, value, onChange, autoComplete, trailing }: FieldProps) {
+  return (
+    <div>
+      <label htmlFor={id} className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wider">
+        {label}
+      </label>
+      <div className="relative">
+        <input
+          id={id}
+          required
+          type={type}
+          placeholder={placeholder}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          autoComplete={autoComplete}
+          className="input-field text-sm pr-10"
+        />
+        {trailing && (
+          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
+            {trailing}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 export default function LoginPage() {
   const router = useRouter();
@@ -171,89 +256,6 @@ export default function LoginPage() {
       .join('')
       .toUpperCase();
 
-  // ── Tab pill toggle ───────────────────────────────────────────────────
-  const ModeToggle = () => (
-    <div className="flex p-1 bg-gray-100/80 rounded-full gap-1">
-      {(['signin', 'signup'] as Mode[]).map((m) => (
-        <button
-          key={m}
-          type="button"
-          onClick={() => switchMode(m)}
-          className={`flex-1 py-1.5 px-4 rounded-full text-xs font-semibold tracking-wide transition-all duration-200 ${
-            mode === m
-              ? 'bg-white text-brandDark shadow-sm'
-              : 'text-gray-500 hover:text-gray-700'
-          }`}
-        >
-          {m === 'signin' ? 'Sign In' : 'Sign Up'}
-        </button>
-      ))}
-    </div>
-  );
-
-  // ── Error / success alert ──────────────────────────────────────────────
-  const ErrorAlert = ({ msg }: { msg: string }) => (
-    <div className="p-3.5 rounded-2xl bg-red-50 border border-red-200 text-xs text-red-700 flex items-center gap-2">
-      <svg className="w-4 h-4 text-red-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-      </svg>
-      <span>{msg}</span>
-    </div>
-  );
-
-  const SuccessAlert = ({ msg }: { msg: string }) => (
-    <div className="p-3.5 rounded-2xl bg-green-50 border border-green-200 text-xs text-green-700 flex items-center gap-2">
-      <svg className="w-4 h-4 text-green-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-      </svg>
-      <span>{msg}</span>
-    </div>
-  );
-
-  // ── Input field ───────────────────────────────────────────────────────
-  const Field = ({
-    label,
-    id,
-    type = 'text',
-    placeholder,
-    value,
-    onChange,
-    autoComplete,
-    trailing,
-  }: {
-    label: string;
-    id: string;
-    type?: string;
-    placeholder?: string;
-    value: string;
-    onChange: (v: string) => void;
-    autoComplete?: string;
-    trailing?: React.ReactNode;
-  }) => (
-    <div>
-      <label htmlFor={id} className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wider">
-        {label}
-      </label>
-      <div className="relative">
-        <input
-          id={id}
-          required
-          type={type}
-          placeholder={placeholder}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          autoComplete={autoComplete}
-          className="input-field text-sm pr-10"
-        />
-        {trailing && (
-          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
-            {trailing}
-          </span>
-        )}
-      </div>
-    </div>
-  );
-
   // ─────────────────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen flex flex-col justify-center items-center px-4 py-12 bg-gradient-to-br from-[#FFF5F8] via-[#F8F5FF] to-[#EFF2FF] relative overflow-hidden font-sans">
@@ -338,7 +340,7 @@ export default function LoginPage() {
         ) : (
           <>
             {/* ── Mode toggle ────────────────────────────────────────────── */}
-            <ModeToggle />
+            <ModeToggle mode={mode} switchMode={switchMode} />
 
             {/* ── Sign In form ────────────────────────────────────────────── */}
             {mode === 'signin' && (
