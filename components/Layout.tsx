@@ -11,7 +11,7 @@ interface LayoutProps {
 
 export default function Layout({
   children,
-  title = 'MechGirl - Where Women Master Mechanics & Tech',
+  title = 'MechGirl - Dream it, Scheme it, STEM it',
   description = 'An open engineering platform designed to inspire and empower women in mechanical design, robotics, and technology.',
 }: LayoutProps) {
   return (

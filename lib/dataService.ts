@@ -142,14 +142,14 @@ function initFallbackStores() {
   if (!inMemoryContact) {
     const rawContact = loadJsonSeed<any>('contact.json', {
       name: 'MechGirl',
-      tagline: 'Empowering Women in Mechanical Engineering',
+      tagline: 'Dream it, Scheme it, STEM it!',
       email: 'contact@mechgirl.com',
       phone: '+1 (555) 123-4567',
       address: '123 Engineering Way, Innovation District, CA 94043',
     });
     inMemoryContact = {
       name: rawContact.name || 'MechGirl',
-      tagline: rawContact.tagline || 'Empowering Women in Mechanical Engineering',
+      tagline: rawContact.tagline || 'Dream it, Scheme it, STEM it!',
       email: rawContact.email || 'contact@mechgirl.com',
       phone: rawContact.phone || '+1 (555) 123-4567',
       address: rawContact.address || '123 Engineering Way, Innovation District, CA 94043',
