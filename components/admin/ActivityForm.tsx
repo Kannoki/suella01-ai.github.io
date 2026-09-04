@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
-import { Activity } from '../../lib/dataService';
-import { getAuthHeaders } from '../../lib/clientAuth';
+import type { Activity } from '../../lib/dataService';
+import { toDateInputValue, formatActivityDate } from '../../lib/dateUtils';
+import { getAuthHeaders, compressImageFile } from '../../lib/clientAuth';
 
 interface ActivityFormProps {
   initialData?: Activity | null;
@@ -11,22 +12,139 @@ interface ActivityFormProps {
 
 const TYPE_OPTIONS = ['Workshop', 'Challenge', 'Masterclass', 'Panel'];
 
+function parseInitialTime(timeStr?: string | null) {
+  if (!timeStr) return { startTime: '', endTime: '', isAllDay: false, isCustom: false, customText: '' };
+  const trimmed = timeStr.trim();
+  if (trimmed.toLowerCase() === 'all day event') {
+    return { startTime: '', endTime: '', isAllDay: true, isCustom: false, customText: '' };
+  }
+  const rangeMatch = trimmed.match(/^(\d{1,2}:\d{2})\s*-\s*(\d{1,2}:\d{2})$/);
+  if (rangeMatch) {
+    const padTime = (t: string) => (t.length === 4 ? `0${t}` : t);
+    return { startTime: padTime(rangeMatch[1]), endTime: padTime(rangeMatch[2]), isAllDay: false, isCustom: false, customText: '' };
+  }
+  const singleMatch = trimmed.match(/^(\d{1,2}:\d{2})$/);
+  if (singleMatch) {
+    const padTime = (t: string) => (t.length === 4 ? `0${t}` : t);
+    return { startTime: padTime(singleMatch[1]), endTime: '', isAllDay: false, isCustom: false, customText: '' };
+  }
+  return { startTime: '', endTime: '', isAllDay: false, isCustom: true, customText: trimmed };
+}
+
 export default function ActivityForm({ initialData, isNew = false }: ActivityFormProps) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
+  const initialTimeState = parseInitialTime(initialData?.time);
+  const [startTime, setStartTime] = useState(initialTimeState.startTime);
+  const [endTime, setEndTime] = useState(initialTimeState.endTime);
+  const [isAllDay, setIsAllDay] = useState(initialTimeState.isAllDay);
+  const [isCustomTime, setIsCustomTime] = useState(initialTimeState.isCustom);
+  const [customTimeText, setCustomTimeText] = useState(initialTimeState.customText);
+
   const [form, setForm] = useState({
     title: initialData?.title || '',
     type: initialData?.type || 'Workshop',
-    date: initialData?.date || '',
+    date: toDateInputValue(initialData?.date),
     time: initialData?.time || '',
     location: initialData?.location || '',
-    seats: initialData?.seats || 30,
+    seats: initialData?.seats ?? 30,
+    status: initialData?.status || 'open',
+    featured: Boolean(initialData?.featured),
     image: initialData?.image || '',
     description: initialData?.description || '',
     content: initialData?.content || '',
   });
+
+  // Re-sync if initialData changes (e.g. async fetch in slug page)
+  useEffect(() => {
+    if (initialData) {
+      const parsedTime = parseInitialTime(initialData.time);
+      setStartTime(parsedTime.startTime);
+      setEndTime(parsedTime.endTime);
+      setIsAllDay(parsedTime.isAllDay);
+      setIsCustomTime(parsedTime.isCustom);
+      setCustomTimeText(parsedTime.customText);
+
+      setForm({
+        title: initialData.title || '',
+        type: initialData.type || 'Workshop',
+        date: toDateInputValue(initialData.date),
+        time: initialData.time || '',
+        location: initialData.location || '',
+        seats: initialData.seats ?? 30,
+        status: initialData.status || 'open',
+        featured: Boolean(initialData.featured),
+        image: initialData.image || '',
+        description: initialData.description || '',
+        content: initialData.content || '',
+      });
+    }
+  }, [initialData]);
+
+  // Synchronize time inputs to form.time
+  const updateTimeSlot = (
+    newStart = startTime,
+    newEnd = endTime,
+    allDay = isAllDay,
+    custom = isCustomTime,
+    customTxt = customTimeText
+  ) => {
+    if (custom) {
+      setForm((prev) => ({ ...prev, time: customTxt }));
+    } else if (allDay) {
+      setForm((prev) => ({ ...prev, time: 'All Day Event' }));
+    } else if (newStart && newEnd) {
+      setForm((prev) => ({ ...prev, time: `${newStart} - ${newEnd}` }));
+    } else if (newStart) {
+      setForm((prev) => ({ ...prev, time: newStart }));
+    } else {
+      setForm((prev) => ({ ...prev, time: '' }));
+    }
+  };
+
+  const handleStartTimeChange = (val: string) => {
+    setStartTime(val);
+    updateTimeSlot(val, endTime, false, false, customTimeText);
+  };
+
+  const handleEndTimeChange = (val: string) => {
+    setEndTime(val);
+    updateTimeSlot(startTime, val, false, false, customTimeText);
+  };
+
+  const handleAllDayToggle = (checked: boolean) => {
+    setIsAllDay(checked);
+    if (checked) {
+      setIsCustomTime(false);
+    }
+    updateTimeSlot(startTime, endTime, checked, false, customTimeText);
+  };
+
+  const handleCustomTimeToggle = (custom: boolean) => {
+    setIsCustomTime(custom);
+    if (custom) {
+      setIsAllDay(false);
+    }
+    updateTimeSlot(startTime, endTime, false, custom, customTimeText);
+  };
+
+  const handleCustomTimeChange = (txt: string) => {
+    setCustomTimeText(txt);
+    updateTimeSlot(startTime, endTime, false, true, txt);
+  };
+
+  const handleImageFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const base64 = await compressImageFile(file, 1200, 800, 0.75);
+      setForm((prev) => ({ ...prev, image: base64 }));
+    } catch {
+      alert('Failed to process image file');
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -75,7 +193,7 @@ export default function ActivityForm({ initialData, isNew = false }: ActivityFor
           <h2 className="text-xl font-bold text-brandDark">
             {isNew ? 'Create New Activity' : `Edit Activity: ${initialData?.title}`}
           </h2>
-          <p className="text-xs text-gray-400 mt-1">Configure event metadata, capacity, and content</p>
+          <p className="text-xs text-gray-400 mt-1">Configure event scheduling, capacity, and workshop content</p>
         </div>
         <div className="flex items-center gap-3">
           <Link
@@ -105,6 +223,7 @@ export default function ActivityForm({ initialData, isNew = false }: ActivityFor
 
       {error && <div className="p-3 bg-red-50 text-red-600 text-xs rounded-xl">{error}</div>}
 
+      {/* Title and Type */}
       <div className="grid sm:grid-cols-2 gap-5">
         <div>
           <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wider">
@@ -138,34 +257,116 @@ export default function ActivityForm({ initialData, isNew = false }: ActivityFor
         </div>
       </div>
 
+      {/* Date and Time Pickers */}
+      <div className="p-5 rounded-2xl bg-gray-50/70 border border-gray-200/60 space-y-4">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-bold uppercase tracking-wider text-brandDark flex items-center gap-1.5">
+            <svg className="w-4 h-4 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            Event Date &amp; Schedule
+          </span>
+          {form.time && (
+            <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-purple-100 text-purple-800">
+              Slot: {form.time}
+            </span>
+          )}
+        </div>
+
+        <div className="grid sm:grid-cols-3 gap-5">
+          {/* HTML5 Date Input */}
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-1.5 uppercase tracking-wider">
+              Date <span className="text-red-500">*</span>
+            </label>
+            <input
+              required
+              type="date"
+              value={form.date}
+              onChange={(e) => setForm({ ...form, date: e.target.value })}
+              className="input-field bg-white"
+            />
+            {form.date ? (
+              <p className="text-[11px] text-purple-600 font-medium mt-1">
+                Formatted: {formatActivityDate(form.date)}
+              </p>
+            ) : (
+              <p className="text-[11px] text-gray-400 mt-1">Select the event date</p>
+            )}
+          </div>
+
+          {/* HTML5 Time Inputs */}
+          <div className="sm:col-span-2 space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                Time Schedule
+              </label>
+              <div className="flex items-center gap-3 text-xs">
+                <label className="flex items-center gap-1.5 text-gray-600 cursor-pointer font-medium">
+                  <input
+                    type="checkbox"
+                    checked={isAllDay}
+                    onChange={(e) => handleAllDayToggle(e.target.checked)}
+                    className="rounded text-purple-600 focus:ring-purple-500 h-3.5 w-3.5"
+                  />
+                  All Day Event
+                </label>
+                <button
+                  type="button"
+                  onClick={() => handleCustomTimeToggle(!isCustomTime)}
+                  className="text-purple-600 hover:text-purple-800 underline text-[11px]"
+                >
+                  {isCustomTime ? 'Use clock pickers' : 'Custom text'}
+                </button>
+              </div>
+            </div>
+
+            {isCustomTime ? (
+              <div>
+                <input
+                  type="text"
+                  placeholder="e.g. 19:00 - 20:30 or Flexible Schedule"
+                  value={customTimeText}
+                  onChange={(e) => handleCustomTimeChange(e.target.value)}
+                  className="input-field bg-white"
+                />
+                <p className="text-[10px] text-gray-400 mt-1">Custom time slot string</p>
+              </div>
+            ) : isAllDay ? (
+              <div className="p-2.5 bg-purple-50 rounded-xl border border-purple-100 text-xs font-medium text-purple-700 flex items-center gap-2">
+                <svg className="w-4 h-4 text-purple-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Scheduled as an All Day Event
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <span className="block text-[10px] text-gray-500 font-semibold mb-1 uppercase">Start Time</span>
+                  <input
+                    type="time"
+                    value={startTime}
+                    onChange={(e) => handleStartTimeChange(e.target.value)}
+                    className="input-field bg-white"
+                  />
+                </div>
+                <div>
+                  <span className="block text-[10px] text-gray-500 font-semibold mb-1 uppercase">End Time</span>
+                  <input
+                    type="time"
+                    value={endTime}
+                    onChange={(e) => handleEndTimeChange(e.target.value)}
+                    className="input-field bg-white"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Seats, Location, and Status */}
       <div className="grid sm:grid-cols-3 gap-5">
-        <div>
-          <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wider">
-            Date <span className="text-red-500">*</span>
-          </label>
-          <input
-            required
-            type="text"
-            placeholder="September 15, 2026"
-            value={form.date}
-            onChange={(e) => setForm({ ...form, date: e.target.value })}
-            className="input-field"
-          />
-        </div>
-
-        <div>
-          <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wider">
-            Time Slot
-          </label>
-          <input
-            type="text"
-            placeholder="19:00 - 20:30"
-            value={form.time}
-            onChange={(e) => setForm({ ...form, time: e.target.value })}
-            className="input-field"
-          />
-        </div>
-
         <div>
           <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wider">
             Seats / Capacity
@@ -178,9 +379,7 @@ export default function ActivityForm({ initialData, isNew = false }: ActivityFor
             className="input-field"
           />
         </div>
-      </div>
 
-      <div className="grid sm:grid-cols-2 gap-5">
         <div>
           <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wider">
             Location
@@ -196,18 +395,87 @@ export default function ActivityForm({ initialData, isNew = false }: ActivityFor
 
         <div>
           <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wider">
-            Banner Image URL
+            Status
           </label>
-          <input
-            type="text"
-            placeholder="https://images.unsplash.com/..."
-            value={form.image}
-            onChange={(e) => setForm({ ...form, image: e.target.value })}
+          <select
+            value={form.status}
+            onChange={(e) => setForm({ ...form, status: e.target.value })}
             className="input-field"
-          />
+          >
+            <option value="open">Open (Accepting Registrations)</option>
+            <option value="full">Full (Capacity Reached)</option>
+            <option value="closed">Closed</option>
+          </select>
         </div>
       </div>
 
+      {/* Banner Image URL or Upload */}
+      <div className="space-y-2">
+        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider">
+          Banner Image (URL or Upload)
+        </label>
+        <div className="flex flex-col sm:flex-row items-center gap-4 bg-gray-50/70 p-4 rounded-2xl border border-gray-200/60">
+          {form.image ? (
+            <div className="w-24 h-16 rounded-xl overflow-hidden border border-gray-200 bg-white flex-shrink-0">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={form.image} alt="Preview" className="w-full h-full object-cover" />
+            </div>
+          ) : (
+            <div className="w-24 h-16 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center text-xs font-medium flex-shrink-0">
+              No Image
+            </div>
+          )}
+
+          <div className="flex-1 w-full space-y-2">
+            <div className="flex items-center gap-2">
+              <label className="cursor-pointer text-xs font-semibold px-3 py-1.5 rounded-full bg-brandDark text-white hover:bg-opacity-90 transition-colors shadow-sm inline-flex items-center gap-1.5">
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                </svg>
+                Upload File
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageFileChange}
+                  className="hidden"
+                />
+              </label>
+              {form.image && (
+                <button
+                  type="button"
+                  onClick={() => setForm((prev) => ({ ...prev, image: '' }))}
+                  className="text-xs text-red-500 hover:text-red-700 underline"
+                >
+                  Remove
+                </button>
+              )}
+            </div>
+            <input
+              type="text"
+              placeholder="Or paste image URL (https://images.unsplash.com/...)"
+              value={form.image}
+              onChange={(e) => setForm({ ...form, image: e.target.value })}
+              className="input-field text-xs bg-white"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Featured Checkbox */}
+      <div className="flex items-center gap-2 pt-1">
+        <input
+          type="checkbox"
+          id="featured"
+          checked={form.featured}
+          onChange={(e) => setForm({ ...form, featured: e.target.checked })}
+          className="rounded text-purple-600 focus:ring-purple-500 h-4 w-4"
+        />
+        <label htmlFor="featured" className="text-xs font-medium text-brandDark cursor-pointer">
+          Feature this activity prominently on the website
+        </label>
+      </div>
+
+      {/* Short Summary */}
       <div>
         <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wider">
           Short Summary / Teaser <span className="text-red-500">*</span>
@@ -222,6 +490,7 @@ export default function ActivityForm({ initialData, isNew = false }: ActivityFor
         />
       </div>
 
+      {/* Full Content */}
       <div>
         <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wider">
           Full HTML / Markdown Content

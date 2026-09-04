@@ -3,15 +3,27 @@ import { useRouter } from 'next/router';
 import Layout from '../../../components/Layout';
 import ActivityForm from '../../../components/admin/ActivityForm';
 import { Activity } from '../../../lib/dataService';
+import { getLoggedInUser } from '../../../lib/clientAuth';
 
 export default function EditActivityPage() {
   const router = useRouter();
   const { slug } = router.query;
   const [activity, setActivity] = useState<Activity | null>(null);
   const [loading, setLoading] = useState(true);
+  const [authorized, setAuthorized] = useState(false);
 
   useEffect(() => {
-    if (!slug) return;
+    const user = getLoggedInUser();
+    if (!user || user.role !== 'admin') {
+      const slugStr = Array.isArray(slug) ? slug[0] : slug || '';
+      router.push(`/login?callbackUrl=/admin/activities/${slugStr}`);
+    } else {
+      setAuthorized(true);
+    }
+  }, [router, slug]);
+
+  useEffect(() => {
+    if (!slug || !authorized) return;
     const slugStr = Array.isArray(slug) ? slug[0] : slug;
     fetch(`/api/activities/${slugStr}`)
       .then((r) => r.json())
@@ -20,7 +32,17 @@ export default function EditActivityPage() {
         setLoading(false);
       })
       .catch(() => setLoading(false));
-  }, [slug]);
+  }, [slug, authorized]);
+
+  if (!authorized) {
+    return (
+      <Layout title="Edit Activity - Admin">
+        <div className="pt-28 pb-20 px-6 max-w-4xl mx-auto text-center text-xs text-gray-400">
+          Checking permissions...
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout title="Edit Activity - Admin">

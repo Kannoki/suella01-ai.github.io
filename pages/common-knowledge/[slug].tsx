@@ -5,22 +5,31 @@ import { motion } from 'framer-motion';
 import Layout from '../../components/Layout';
 import Modal from '../../components/Modal';
 import { AnimatedSection } from '../../components/AnimatedSection';
-import { getActivityBySlug, Activity } from '../../lib/dataService';
+import { getActivityBySlug, Activity, getKnowledgeBySlug, Knowledge } from '../../lib/dataService';
+import { formatActivityDate } from '../../lib/dateUtils';
 
 export const getServerSideProps: GetServerSideProps = async (context) => {
   const slug = context.params?.slug as string;
-  const activity = await getActivityBySlug(slug);
-
-  if (!activity) {
+  const article = await getKnowledgeBySlug(slug);
+  if (article) {
     return {
-      notFound: true,
+      props: {
+        article,
+      },
+    };
+  }
+
+  const activity = await getActivityBySlug(slug);
+  if (activity) {
+    return {
+      props: {
+        activity,
+      },
     };
   }
 
   return {
-    props: {
-      activity,
-    },
+    notFound: true,
   };
 };
 
@@ -162,18 +171,112 @@ function RegistrationForm({
   );
 }
 
-export default function ActivityDetail({ activity: initialActivity }: ActivityDetailProps) {
-  const [activity, setActivity] = useState<Activity>(initialActivity);
+interface CommonKnowledgeDetailProps {
+  activity?: Activity;
+  article?: Knowledge;
+}
+
+export default function CommonKnowledgeDetail({ activity: initialActivity, article }: CommonKnowledgeDetailProps) {
+  const [activity, setActivity] = useState<Activity | undefined>(initialActivity);
   const [modalOpen, setModalOpen] = useState(false);
+
+  // If this is a Knowledge article
+  if (article) {
+    return (
+      <Layout
+        title={`${article.title} — Common Knowledge MechGirl`}
+        description={article.summary || article.title}
+      >
+        <div className="min-h-screen pt-28 pb-20 px-6">
+          <article className="max-w-3xl mx-auto space-y-8">
+            {/* Breadcrumb */}
+            <Link
+              href="/common-knowledge"
+              className="inline-flex items-center gap-2 text-xs font-medium text-purple-600 hover:text-purple-800 transition-colors"
+            >
+              &larr; Back to Common Knowledge
+            </Link>
+
+            {/* Header Block */}
+            <header className="space-y-4">
+              <div className="flex items-center gap-2.5">
+                <span className="badge bg-purple-100 text-purple-700 font-semibold">
+                  {article.category}
+                </span>
+                <span className="text-xs text-gray-400">
+                  {article.createdAt ? new Date(article.createdAt).toLocaleDateString(undefined, { dateStyle: 'medium' }) : 'Recent'}
+                </span>
+              </div>
+
+              <h1 className="text-3xl md:text-5xl font-bold text-brandDark tracking-tight leading-tight">
+                {article.title}
+              </h1>
+
+              {article.summary && (
+                <p className="text-base text-gray-600 font-light leading-relaxed">
+                  {article.summary}
+                </p>
+              )}
+
+              {/* Author Row */}
+              <div className="flex items-center gap-3 pt-3 border-t border-gray-100">
+                <div className="w-10 h-10 rounded-full overflow-hidden bg-pastelPurple/30 flex items-center justify-center font-bold text-purple-700 text-xs">
+                  {article.authorImage ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={article.authorImage} alt={article.authorName || ''} className="w-full h-full object-cover" />
+                  ) : (
+                    (article.authorName || 'U').slice(0, 2).toUpperCase()
+                  )}
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-brandDark">{article.authorName || 'Community Author'}</p>
+                  <p className="text-[11px] text-gray-400">STEM Contributor &bull; Verified Review</p>
+                </div>
+              </div>
+            </header>
+
+            {/* Featured Image */}
+            {article.image && (
+              <div className="h-72 md:h-96 w-full rounded-3xl overflow-hidden bg-gray-100 shadow-soft">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={article.image} alt={article.title} className="w-full h-full object-cover" />
+              </div>
+            )}
+
+            {/* Article Content Body */}
+            <div className="bg-white rounded-3xl p-8 md:p-12 border border-gray-100 shadow-soft space-y-6">
+              <div className="prose prose-purple max-w-none text-sm md:text-base leading-relaxed text-gray-700 whitespace-pre-line font-light">
+                {article.content}
+              </div>
+
+              {/* Tags */}
+              {article.tags && article.tags.length > 0 && (
+                <div className="pt-6 border-t border-gray-100 flex flex-wrap gap-2 items-center">
+                  <span className="text-xs font-medium text-gray-400">Tags:</span>
+                  {article.tags.map((tag, i) => (
+                    <span key={i} className="text-xs bg-gray-100 text-gray-700 px-3 py-1 rounded-full">
+                      #{tag}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          </article>
+        </div>
+      </Layout>
+    );
+  }
+
+  if (!activity) return null;
 
   const isFull = activity.seats > 0 && activity.registered >= activity.seats;
 
   const handleRegistered = () => {
-    setActivity((prev) => ({
+    setActivity((prev) => (prev ? {
       ...prev,
       registered: prev.registered + 1,
       status: prev.registered + 1 >= prev.seats ? 'full' : 'open',
-    }));
+    } : undefined));
   };
 
   return (
@@ -231,7 +334,7 @@ export default function ActivityDetail({ activity: initialActivity }: ActivityDe
                   <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider block">
                     Date &amp; Time
                   </span>
-                  <p className="text-brandDark font-medium">{activity.date}</p>
+                  <p className="text-brandDark font-medium">{formatActivityDate(activity.date)}</p>
                   {activity.time && <p className="text-xs text-gray-500 font-light">{activity.time}</p>}
                 </div>
 

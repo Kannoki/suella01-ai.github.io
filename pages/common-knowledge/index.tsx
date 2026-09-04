@@ -4,18 +4,20 @@ import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import Layout from '../../components/Layout';
 import { AnimatedSection } from '../../components/AnimatedSection';
-import { getActivities, Activity } from '../../lib/dataService';
+import { getActivities, Activity, getKnowledgeList, Knowledge } from '../../lib/dataService';
+import { formatActivityDate } from '../../lib/dateUtils';
 
 export const getStaticProps: GetStaticProps = async () => {
   try {
     const activities = await getActivities();
+    const articles = await getKnowledgeList({ status: 'confirmed' });
     return {
-      props: { activities },
+      props: { activities, articles },
       revalidate: 10,
     };
   } catch {
     return {
-      props: { activities: [] },
+      props: { activities: [], articles: [] },
       revalidate: 10,
     };
   }
@@ -50,9 +52,10 @@ function ArrowIcon({ className = '' }: { className?: string }) {
 
 interface CommonKnowledgeProps {
   activities: Activity[];
+  articles: Knowledge[];
 }
 
-export default function CommonKnowledge({ activities = [] }: CommonKnowledgeProps) {
+export default function CommonKnowledge({ activities = [], articles = [] }: CommonKnowledgeProps) {
   const [selectedType, setSelectedType] = useState('All');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
@@ -89,10 +92,91 @@ export default function CommonKnowledge({ activities = [] }: CommonKnowledgeProp
               Common Knowledge &amp; Events
             </h1>
             <p className="text-sm md:text-base text-gray-500 font-light leading-relaxed">
-              Explore hands-on robotics workshops, CAD masterclasses, community panels, and design challenges to elevate your engineering skills.
+              Explore community-driven engineering articles, robotics guides, hands-on workshops, and collaborative challenges.
             </p>
           </div>
         </AnimatedSection>
+
+        {/* Community Technical Knowledge Articles Section */}
+        {articles.length > 0 && (
+          <AnimatedSection delay={0.05}>
+            <div className="space-y-6">
+              <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+                <div>
+                  <h2 className="text-2xl font-bold text-brandDark">Engineering Guides &amp; Articles</h2>
+                  <p className="text-xs text-gray-500">Verified peer-reviewed technical publications and student research.</p>
+                </div>
+                <Link
+                  href="/admin"
+                  className="text-xs font-semibold text-purple-600 hover:text-purple-800 transition-colors flex items-center gap-1"
+                >
+                  + Submit Your Article &rarr;
+                </Link>
+              </div>
+
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {articles.map((art) => (
+                  <Link
+                    key={art.id}
+                    href={`/common-knowledge/${art.slug}`}
+                    className="bg-white rounded-3xl p-6 border border-gray-100 shadow-soft hover:shadow-card hover:border-pastelPurple/60 transition-all flex flex-col justify-between space-y-4 group"
+                  >
+                    <div className="space-y-3">
+                      {art.image && (
+                        <div className="h-40 -mx-6 -mt-6 rounded-t-3xl overflow-hidden bg-gray-100 relative">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={art.image}
+                            alt={art.title}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                          />
+                          <span className="absolute top-3 left-3">
+                            <span className="badge bg-white/90 text-purple-700 backdrop-blur-sm shadow-xs text-[11px] font-semibold">
+                              {art.category}
+                            </span>
+                          </span>
+                        </div>
+                      )}
+
+                      {!art.image && (
+                        <span className="badge bg-purple-100 text-purple-700 font-semibold text-[11px]">
+                          {art.category}
+                        </span>
+                      )}
+
+                      <h3 className="text-base font-bold text-brandDark group-hover:text-purple-600 transition-colors line-clamp-2">
+                        {art.title}
+                      </h3>
+
+                      {art.summary && (
+                        <p className="text-xs text-gray-500 font-light line-clamp-2 leading-relaxed">
+                          {art.summary}
+                        </p>
+                      )}
+
+                      {art.tags && art.tags.length > 0 && (
+                        <div className="flex flex-wrap gap-1 pt-1">
+                          {art.tags.slice(0, 3).map((tag, i) => (
+                            <span key={i} className="text-[10px] bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">
+                              #{tag}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex items-center justify-between pt-3 border-t border-gray-100 text-xs text-gray-400">
+                      <span>{art.authorName || 'Contributor'}</span>
+                      <span className="text-purple-600 font-medium group-hover:translate-x-1 transition-transform inline-flex items-center gap-1">
+                        Read Article &rarr;
+                      </span>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          </AnimatedSection>
+        )}
 
         {/* Featured Card */}
         {featured && selectedType === 'All' && !search && page === 1 && (
@@ -125,7 +209,7 @@ export default function CommonKnowledge({ activities = [] }: CommonKnowledgeProp
                   <div className="space-y-3">
                     <div className="flex flex-wrap items-center gap-2">
                       <span className={`badge ${typeColor(featured.type)}`}>{featured.type}</span>
-                      <span className="text-xs text-gray-400 font-light">{featured.date}</span>
+                      <span className="text-xs text-gray-400 font-light">{formatActivityDate(featured.date)}</span>
                     </div>
                     <h2 className="text-2xl font-semibold text-brandDark group-hover:text-purple-600 transition-colors leading-snug">
                       {featured.title}
@@ -247,7 +331,7 @@ export default function CommonKnowledge({ activities = [] }: CommonKnowledgeProp
                       <div className="p-5 flex-1 flex flex-col justify-between">
                         <div className="space-y-2">
                           <span className="text-[11px] text-gray-400 font-light block">
-                            {activity.date}
+                            {formatActivityDate(activity.date)}
                           </span>
                           <h3 className="text-base font-semibold text-brandDark group-hover:text-purple-600 transition-colors leading-snug line-clamp-2">
                             {activity.title}

@@ -14,6 +14,7 @@ import {
   Product,
   CarouselSlide,
 } from '../lib/dataService';
+import { formatActivityDate } from '../lib/dateUtils';
 
 export const getStaticProps: GetStaticProps = async () => {
   try {
@@ -164,7 +165,7 @@ export default function Home({ upcomingActivities = [], featuredProducts = [], s
                                 <rect x="1" y="2" width="10" height="9" rx="1" stroke="currentColor" strokeWidth="1.2" />
                                 <path d="M1 5h10M4 1v2M8 1v2" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
                               </svg>
-                              {activity.date}
+                              {formatActivityDate(activity.date)}
                             </span>
                             {activity.seats > 0 && (
                               <span>
