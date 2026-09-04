@@ -3,24 +3,30 @@ import type { GetStaticProps } from 'next';
 import { motion } from 'framer-motion';
 import Layout from '../components/Layout';
 import { AnimatedSection, AnimatedStagger, StaggerItem } from '../components/AnimatedSection';
-import { getAboutProfile, AboutProfile } from '../lib/dataService';
+import { getAboutProfile, AboutProfile, getUsers, User } from '../lib/dataService';
 
 export const getStaticProps: GetStaticProps = async () => {
   try {
     const profile = await getAboutProfile();
+    const allUsers = await getUsers();
+    const contributors = allUsers.filter((u) => u.role === 'admin' || u.role === 'author');
     return {
-      props: { profile },
+      props: {
+        profile,
+        contributors: contributors.length > 0 ? contributors : allUsers,
+      },
       revalidate: 10,
     };
   } catch {
     return {
       props: {
         profile: {
-          name: 'MINH NGOC',
-          tagline: 'Mechanical Engineering Student',
+          name: 'Minh Ngọc',
+          tagline: 'Mechanical Engineering Student & STEM Advocate',
           bio: 'A passionate mechanical engineering student exploring mechanics, robotics, and tech.',
           timeline: [],
         },
+        contributors: [],
       },
       revalidate: 10,
     };
@@ -88,11 +94,111 @@ function DropWordName({ text }: { text: string }) {
   );
 }
 
-interface AboutProps {
-  profile: AboutProfile;
+function ContributorCard({ user }: { user: User }) {
+  const [imageError, setImageError] = useState(false);
+  const initials = (user.name || 'Admin')
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((s) => s[0]?.toUpperCase())
+    .join('');
+
+  const roleBadgeColor =
+    user.role === 'admin'
+      ? 'bg-purple-100 text-purple-700 border-purple-200/60'
+      : user.role === 'author'
+      ? 'bg-pink-100 text-pink-700 border-pink-200/60'
+      : 'bg-gray-100 text-gray-700 border-gray-200/60';
+
+  const roleLabel =
+    user.role === 'admin' ? 'Administrator' : user.role === 'author' ? 'Author & Contributor' : 'Contributor';
+
+  const latestTimeline = user.timeline && user.timeline.length > 0 ? user.timeline[0] : null;
+
+  return (
+    <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-soft hover:shadow-card hover:-translate-y-1 hover:border-pastelPurple/50 transition-all duration-300 flex flex-col justify-between h-full group">
+      <div className="space-y-4">
+        {/* Avatar + Badge + Name */}
+        <div className="flex items-start gap-4">
+          <div className="relative w-16 h-16 rounded-2xl overflow-hidden ring-2 ring-pastelPurple/40 bg-gradient-to-br from-pastelPink via-pastelPurple to-purple-200 flex-shrink-0 shadow-sm">
+            {user.image && !imageError ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={user.image}
+                alt={user.name || 'User'}
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                onError={() => setImageError(true)}
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-lg font-bold text-purple-700">
+                {initials}
+              </div>
+            )}
+          </div>
+
+          <div className="flex-1 min-w-0">
+            <span className={`text-[10px] uppercase font-bold px-2.5 py-0.5 rounded-full border ${roleBadgeColor}`}>
+              {roleLabel}
+            </span>
+            <h3 className="text-lg font-semibold text-brandDark mt-1 truncate group-hover:text-purple-600 transition-colors">
+              {user.name || 'Contributor'}
+            </h3>
+            {user.tagline && (
+              <p className="text-xs text-purple-600 font-medium line-clamp-1">
+                {user.tagline}
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* Bio */}
+        {user.bio ? (
+          <p className="text-xs text-gray-500 font-light leading-relaxed line-clamp-3">
+            {user.bio}
+          </p>
+        ) : (
+          <p className="text-xs text-gray-400 font-light italic">
+            Core team member contributing to the MechGirl STEM platform &amp; community.
+          </p>
+        )}
+
+        {/* Education/Affiliation highlight */}
+        {latestTimeline && (
+          <div className="bg-gray-50/70 p-3 rounded-xl border border-gray-100 text-[11px] space-y-0.5">
+            <span className="text-[10px] uppercase font-semibold text-gray-400 tracking-wider block">
+              Focus / Education
+            </span>
+            <p className="font-medium text-brandDark truncate">{latestTimeline.title}</p>
+            <p className="text-gray-500 font-light truncate">{latestTimeline.institution}</p>
+          </div>
+        )}
+      </div>
+
+      {/* Footer: Email */}
+      {user.email && (
+        <div className="pt-4 mt-4 border-t border-gray-100 flex items-center justify-between text-xs text-gray-400">
+          <a
+            href={`mailto:${user.email}`}
+            className="inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-purple-600 transition-colors truncate"
+          >
+            <svg className="w-3.5 h-3.5 text-purple-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+            </svg>
+            <span className="truncate">{user.email}</span>
+          </a>
+          <span className="text-[10px] text-gray-400 font-mono">Team</span>
+        </div>
+      )}
+    </div>
+  );
 }
 
-export default function About({ profile }: AboutProps) {
+interface AboutProps {
+  profile: AboutProfile;
+  contributors: User[];
+}
+
+export default function About({ profile, contributors = [] }: AboutProps) {
   const { name, tagline, bio, image, photoUrl, timeline = [] } = profile;
 
   return (
@@ -160,6 +266,38 @@ export default function About({ profile }: AboutProps) {
                       </p>
                     </div>
                   </div>
+                </StaggerItem>
+              ))}
+            </AnimatedStagger>
+          )}
+        </section>
+
+        {/* Contributors / Team Section */}
+        <section className="space-y-8 pt-8 border-t border-gray-100">
+          <AnimatedSection>
+            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+              <div>
+                <span className="text-xs font-semibold uppercase tracking-widest text-purple-700 bg-pastelPurple/40 px-3.5 py-1 rounded-full border border-purple-200/40 inline-block mb-3">
+                  Leadership &amp; Community
+                </span>
+                <h2 className="section-title">Contributors</h2>
+                <p className="section-subtitle">The administrators, engineers, and mentors behind MechGirl</p>
+              </div>
+              <div className="text-xs text-gray-400 font-light">
+                {contributors.length} {contributors.length === 1 ? 'contributor' : 'contributors'}
+              </div>
+            </div>
+          </AnimatedSection>
+
+          {contributors.length === 0 ? (
+            <div className="text-center py-12 bg-white rounded-3xl border border-gray-100 text-gray-400 text-sm">
+              No contributors listed yet.
+            </div>
+          ) : (
+            <AnimatedStagger staggerDelay={0.08} className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {contributors.map((user) => (
+                <StaggerItem key={user.id}>
+                  <ContributorCard user={user} />
                 </StaggerItem>
               ))}
             </AnimatedStagger>
