@@ -54,11 +54,10 @@ function ModeToggle({ mode, switchMode }: { mode: Mode; switchMode: (m: Mode) =>
           key={m}
           type="button"
           onClick={() => switchMode(m)}
-          className={`flex-1 py-1.5 px-4 rounded-full text-xs font-semibold tracking-wide transition-all duration-200 ${
-            mode === m
-              ? 'bg-white text-brandDark shadow-sm'
-              : 'text-gray-500 hover:text-gray-700'
-          }`}
+          className={`flex-1 py-1.5 px-4 rounded-full text-xs font-semibold tracking-wide transition-all duration-200 ${mode === m
+            ? 'bg-white text-brandDark shadow-sm'
+            : 'text-gray-500 hover:text-gray-700'
+            }`}
         >
           {m === 'signin' ? 'Sign In' : 'Sign Up'}
         </button>
@@ -303,9 +302,8 @@ export default function LoginPage() {
               <div className="text-left">
                 <p className="text-sm font-semibold text-brandDark">{existingUser.name}</p>
                 <p className="text-xs text-gray-500">{existingUser.email}</p>
-                <span className={`inline-block mt-0.5 px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase ${
-                  existingUser.role === 'admin' ? 'bg-purple-100 text-purple-700' : 'bg-pink-100 text-pink-700'
-                }`}>
+                <span className={`inline-block mt-0.5 px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase ${existingUser.role === 'admin' ? 'bg-purple-100 text-purple-700' : 'bg-pink-100 text-pink-700'
+                  }`}>
                   {existingUser.role || 'user'}
                 </span>
               </div>
@@ -381,17 +379,6 @@ export default function LoginPage() {
                     autoComplete="current-password"
                     className="input-field text-sm"
                   />
-                </div>
-
-                {/* Admin tip */}
-                <div className="p-3 bg-purple-50/50 rounded-xl border border-purple-100/60 text-[11px] text-purple-700 flex items-start gap-1.5">
-                  <span className="font-semibold mt-0.5">Tip:</span>
-                  <span>
-                    Admin key:{' '}
-                    <code className="bg-purple-100 px-1 py-0.5 rounded text-purple-900 font-mono">
-                      mechgirl-admin-2026
-                    </code>
-                  </span>
                 </div>
 
                 <button
