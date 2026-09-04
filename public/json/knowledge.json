@@ -1,0 +1,98 @@
+[
+  {
+    "id": "know-1",
+    "title": "Introduction to Autonomous Mobile Robots (AMR)",
+    "slug": "intro-to-autonomous-mobile-robots",
+    "category": "Robotics",
+    "summary": "Explore the fundamental architecture of autonomous mobile robots, including wheel kinematics, sensor fusion with LiDAR and IMU, and SLAM algorithms.",
+    "content": "Autonomous Mobile Robots (AMRs) represent a cornerstone of modern automation. Unlike Automated Guided Vehicles (AGVs) that rely on magnetic strips or physical wires, AMRs navigate dynamically using on-board intelligence.\n\n### Core Navigation Stack\n1. **Perception**: 2D/3D LiDAR, RGB-D depth cameras, and wheel encoders provide continuous feedback of the surrounding environment.\n2. **Localization & Mapping (SLAM)**: Algorithms like Cartographer and Fast-LIO fuse sensor observations to build an occupancy grid while estimating real-time robot pose.\n3. **Global & Local Path Planning**: Dijkstra or A* determines the global route across known waypoints, while TEB (Timed Elastic Band) or DWA (Dynamic Window Approach) ensures collision avoidance with moving obstacles.\n\n### Practical Takeaways\nWhen building your first AMR prototype with ROS2, prioritize reliable wheel odometry calibration before tuning high-level nav2 controllers.",
+    "image": "https://images.unsplash.com/photo-1485827404703-89b55fcc595e?auto=format&fit=crop&q=80&w=800",
+    "status": "confirmed",
+    "confirmed": true,
+    "authorId": "user-1",
+    "authorName": "MINH NGOC",
+    "authorEmail": "admin@mechgirl.com",
+    "authorImage": "https://s160-26-ava-talk.zadn.vn/10/c404dafda064d35143f91abcee510172.jpg?key=Ub0NmSB86oozE7OCY3VA6g&time=1791081893",
+    "tags": [
+      "Robotics",
+      "AMR",
+      "SLAM",
+      "ROS2"
+    ],
+    "views": 342,
+    "createdAt": "2026-08-15T10:00:00.000Z",
+    "updatedAt": "2026-08-15T10:00:00.000Z"
+  },
+  {
+    "id": "know-2",
+    "title": "Finite Element Analysis (FEA) Basics in SolidWorks",
+    "slug": "fea-basics-in-solidworks",
+    "category": "Mechanics",
+    "summary": "A practical guide to stress concentrations, mesh refinement, and Von Mises yield criteria for mechanical structural design.",
+    "content": "Finite Element Analysis (FEA) is an indispensable computational tool that allows mechanical engineers to predict structural behavior under operational loads.\n\n### Essential FEA Workflow\n1. **Geometry Simplification**: Suppress cosmetic fillets and tiny non-structural holes that cause unnatural mesh singularity.\n2. **Material Definition**: Assign isotropic material properties (Yield strength, Elastic Modulus, Poisson's ratio).\n3. **Boundary Conditions**: Correctly fixture surfaces that reflect physical constraints in the assembly.\n4. **Mesh Convergence**: Always perform at least two mesh refinements (h-adaptive) to confirm that max Von Mises stresses asymptotically converge.",
+    "image": "https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&q=80&w=800",
+    "status": "confirmed",
+    "confirmed": true,
+    "authorId": "user-1",
+    "authorName": "MINH NGOC",
+    "authorEmail": "admin@mechgirl.com",
+    "authorImage": "https://s160-26-ava-talk.zadn.vn/10/c404dafda064d35143f91abcee510172.jpg?key=Ub0NmSB86oozE7OCY3VA6g&time=1791081893",
+    "tags": [
+      "FEA",
+      "CAD",
+      "SolidWorks",
+      "Stress Analysis"
+    ],
+    "views": 218,
+    "createdAt": "2026-08-20T14:30:00.000Z",
+    "updatedAt": "2026-08-20T14:30:00.000Z"
+  },
+  {
+    "id": "know-3",
+    "title": "PID Controller Tuning for Precision Actuators",
+    "slug": "pid-controller-tuning-precision-actuators",
+    "category": "Engineering",
+    "summary": "Community submission on how to tune Proportional-Integral-Derivative loops for DC servos without overshoot.",
+    "content": "Tuning PID loops is a fundamental skill for roboticists working with brushless motors and DC servo drives.\n\n### Step-by-Step Manual Tuning Method (Ziegler-Nichols Variant):\n1. Set Ki and Kd to zero.\n2. Increase Kp until the actuator produces stable, sustained oscillations.\n3. Note the critical gain Ku and oscillation period Tu.\n4. Apply derivative gain Kd to dampen overshoot, followed by small incremental Ki to eliminate steady-state position error.",
+    "image": "https://images.unsplash.com/photo-1581092335397-9583fe92d232?auto=format&fit=crop&q=80&w=800",
+    "status": "pending",
+    "confirmed": false,
+    "authorId": "user-2",
+    "authorName": "Sarah Chen",
+    "authorEmail": "sarah.chen@mechgirl.com",
+    "authorImage": "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=400",
+    "tags": [
+      "Control Systems",
+      "PID",
+      "Actuators",
+      "Mechatronics"
+    ],
+    "views": 45,
+    "createdAt": "2026-09-02T08:15:00.000Z",
+    "updatedAt": "2026-09-02T08:15:00.000Z"
+  },
+  {
+    "id": "know-4",
+    "title": "Getting Started with ROS2 Humble on Raspberry Pi 5",
+    "slug": "getting-started-ros2-humble-raspberry-pi-5",
+    "category": "Robotics",
+    "summary": "How to deploy Ubuntu 24.04 Server with ROS2 Humble on SBC hardware for edge robotics control.",
+    "content": "The Raspberry Pi 5 provides sufficient compute for running real-time micro-ROS and standard ROS2 publisher/subscriber nodes simultaneously.\n\n### Installation Best Practices:\n- Use active cooling to prevent thermal throttling under high CPU load during laser scan processing.\n- Set up CycloneDDS as the RMW implementation for low-latency peer-to-peer robotics network communication.",
+    "image": "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&q=80&w=800",
+    "status": "confirmed",
+    "confirmed": true,
+    "authorId": "user-1",
+    "authorName": "MINH NGOC",
+    "authorEmail": "admin@mechgirl.com",
+    "authorImage": "https://s160-26-ava-talk.zadn.vn/10/c404dafda064d35143f91abcee510172.jpg?key=Ub0NmSB86oozE7OCY3VA6g&time=1791081893",
+    "tags": [
+      "ROS2",
+      "Raspberry Pi",
+      "Linux",
+      "Robotics"
+    ],
+    "views": 180,
+    "createdAt": "2026-08-25T16:00:00.000Z",
+    "updatedAt": "2026-08-25T16:00:00.000Z"
+  }
+]

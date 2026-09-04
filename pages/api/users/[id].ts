@@ -51,3 +51,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   res.setHeader('Allow', ['GET', 'PUT', 'DELETE']);
   return res.status(405).end(`Method ${req.method} Not Allowed`);
 }
+
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: '25mb',
+    },
+  },
+};

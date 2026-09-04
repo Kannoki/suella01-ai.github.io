@@ -181,3 +181,25 @@ model ContactMessage {
 
   @@map("contact_messages")
 }
+
+model Knowledge {
+  id          String   @id @default(cuid())
+  title       String
+  slug        String   @unique
+  category    String   @default("Engineering") // Robotics, Mechanics, AI, IoT, Engineering
+  summary     String?  @db.Text
+  content     String   @db.Text
+  image       String?  @db.Text
+  status      String   @default("pending") // "pending" | "confirmed" | "rejected"
+  confirmed   Boolean  @default(false)
+  authorId    String?  @map("author_id")
+  authorName  String?  @map("author_name")
+  authorEmail String?  @map("author_email")
+  authorImage String?  @map("author_image")
+  tags        String[] @default([])
+  views       Int      @default(0)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("common_knowledge")
+}

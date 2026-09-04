@@ -13,6 +13,18 @@ const nextConfig = {
     ],
   },
 
+  // Webpack client-side fallbacks for optional server/fallback modules
+  webpack: (config, { isServer }) => {
+    if (!isServer) {
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        fs: false,
+        path: false,
+      };
+    }
+    return config;
+  },
+
   // Suppress noisy telemetry
   experimental: {},
 };

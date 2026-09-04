@@ -1,14 +1,15 @@
 {
-  "name": "MechGirl",
+  "name": "MechGirl v1",
   "tagline": "Dream it, Scheme it, STEM it!",
-  "email": "contact@mechgirl.com",
+  "email": "ngoc@meck.it",
   "phone": "+1 (555) 123-4567",
   "address": "123 Engineering Way, Innovation District, CA 94043",
+  "about": "An open engineering platform designed to inspire and empower women to take the lead in mechanical design and technology. We share advanced engineering resources, host tech events, and connect the next generation of creative minds in STEM.",
   "socials": {
     "facebook": "https://facebook.com/mechgirl",
     "youtube": "https://youtube.com/@mechgirl",
     "github": "https://github.com/mechgirl",
-    "instagram": "https://instagram.com/mechgirl_official"
-  },
-  "about": "An open engineering platform designed to inspire and empower women to take the lead in mechanical design and technology. We share advanced engineering resources, host tech events, and connect the next generation of creative minds in STEM."
+    "instagram": "https://instagram.com/mechgirl_official",
+    "linkedin": ""
+  }
 }
