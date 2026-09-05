@@ -4,6 +4,7 @@ import { PrismaAdapter } from '@next-auth/prisma-adapter';
 import GitHubProvider from 'next-auth/providers/github';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import prisma from '../../../lib/prisma';
+import { getUserByEmail, getUserById } from '../../../lib/dataService';
 import { verifyPassword } from '../../../lib/passwords';
 import { Role } from '../../../prisma/generated/enums';
 
@@ -34,7 +35,7 @@ export const authOptions: NextAuthOptions = {
         if (!email || !password) return null;
 
         try {
-          const user = await prisma.user.findUnique({ where: { email } });
+          const user = await getUserByEmail(email);
           if (!user || !user.passwordHash) return null;
           const ok = await verifyPassword(password, user.passwordHash);
           if (!ok) return null;
@@ -73,10 +74,7 @@ export const authOptions: NextAuthOptions = {
         (session.user as any).id = token.id;
         // Look up the role on each request so role changes propagate immediately
         try {
-          const dbUser = await prisma.user.findUnique({
-            where: { id: token.id as string },
-            select: { role: true },
-          });
+          const dbUser = await getUserById(token.id as string);
           (session.user as any).role = dbUser?.role || Role.USER;
         } catch {
           (session.user as any).role = Role.USER;

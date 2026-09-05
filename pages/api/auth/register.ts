@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import prisma from '../../../lib/prisma';
+import { getUserByEmail, createUser } from '../../../lib/dataService';
 import { hashPassword } from '../../../lib/passwords';
 import { Role } from '../../../prisma/generated/enums';
 
@@ -9,7 +9,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).end(`Method ${req.method} Not Allowed`);
   }
 
-  const { name, email, password } = req.body;
+  const { name, email, password } = req.body || {};
 
   if (!name || !email || !password) {
     return res.status(400).json({ error: 'Name, email, and password are required' });
@@ -28,30 +28,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     // Reject duplicate emails
-    const existing = await prisma.user.findUnique({ where: { email: normalizedEmail } });
+    const existing = await getUserByEmail(normalizedEmail);
     if (existing) {
       return res.status(409).json({ error: 'An account with that email already exists' });
     }
 
     const passwordHash = await hashPassword(password);
 
-    const created = await prisma.user.create({
-      data: {
-        name: String(name).trim(),
-        email: normalizedEmail,
-        role: Role.USER,
-        passwordHash,
-        tagline: 'MechGirl Community Member',
-      },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        tagline: true,
-        image: true,
-        bio: true,
-      },
+    const created = await createUser({
+      name: String(name).trim(),
+      email: normalizedEmail,
+      role: Role.USER,
+      passwordHash,
+      tagline: 'MechGirl Community Member',
     });
 
     // Return a non-sensitive payload (no passwordHash) — the client logs the user in
@@ -59,7 +48,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(201).json({
       success: true,
       message: 'Account created successfully',
-      user: created,
+      user: {
+        id: created.id,
+        name: created.name,
+        email: created.email,
+        role: created.role,
+        tagline: created.tagline,
+        image: created.image,
+        bio: created.bio,
+      },
     });
   } catch (err: any) {
     // eslint-disable-next-line no-console

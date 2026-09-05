@@ -1,7 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { getUserByEmail } from '../../../lib/dataService';
+import { getUserByEmail, getUsers, createUser } from '../../../lib/dataService';
 import { verifyPassword, hashPassword } from '../../../lib/passwords';
-import prisma from '../../../lib/prisma';
 import { Role } from '../../../prisma/generated/enums';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -26,23 +25,28 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (!user) {
       const bootstrapPassword = process.env.ADMIN_BOOTSTRAP_PASSWORD;
       if (bootstrapPassword && password === bootstrapPassword) {
-        const existingAny = await prisma.user.count();
-        if (existingAny === 0) {
+        const allUsers = await getUsers();
+        if (allUsers.length === 0) {
           const passwordHash = await hashPassword(bootstrapPassword);
-          const created = await prisma.user.create({
-            data: {
-              name: 'Administrator',
-              email: String(email).toLowerCase().trim(),
-              role: Role.ADMIN,
-              passwordHash,
-              tagline: 'Site Administrator',
-            },
-            select: { id: true, name: true, email: true, role: true, tagline: true, image: true, bio: true },
+          const created = await createUser({
+            name: 'Administrator',
+            email: String(email).toLowerCase().trim(),
+            role: Role.ADMIN,
+            passwordHash,
+            tagline: 'Site Administrator',
           });
           return res.status(200).json({
             success: true,
             message: 'Bootstrap admin account created',
-            user: created,
+            user: {
+              id: created.id,
+              name: created.name,
+              email: created.email,
+              role: created.role,
+              tagline: created.tagline,
+              image: created.image,
+              bio: created.bio,
+            },
           });
         }
       }
