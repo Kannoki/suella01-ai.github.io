@@ -1,6 +1,7 @@
 /**
  * Client-side helper to attach admin authorization headers to fetch requests.
- * Uses NextAuth session automatically, or falls back to stored admin key or default dev key.
+ * Uses NextAuth session automatically, or falls back to the stored admin key
+ * (which must be obtained via real login — no hardcoded defaults).
  */
 export function getAuthHeaders(extraHeaders: Record<string, string> = {}): Record<string, string> {
   const headers: Record<string, string> = {
@@ -9,10 +10,8 @@ export function getAuthHeaders(extraHeaders: Record<string, string> = {}): Recor
   };
 
   if (typeof window !== 'undefined') {
-    const storedKey =
-      localStorage.getItem('admin_api_key') ||
-      (document.cookie.match(/(?:^|;\s*)admin_token=([^;]+)/)?.[1] ? decodeURIComponent(document.cookie.match(/(?:^|;\s*)admin_token=([^;]+)/)![1]) : 'mechgirl-admin-2026');
-
+    const storedKey = localStorage.getItem('admin_api_key');
+    // Only attach Authorization headers when we actually have a key from real login
     if (storedKey) {
       headers['Authorization'] = `Bearer ${storedKey}`;
       headers['x-admin-key'] = storedKey;
@@ -22,18 +21,24 @@ export function getAuthHeaders(extraHeaders: Record<string, string> = {}): Recor
   return headers;
 }
 
+/**
+ * Stores an admin API key in localStorage and a hardened cookie.
+ * Cookie uses SameSite=Strict + Secure (in production) to mitigate CSRF.
+ */
 export function setAdminKey(key: string) {
   if (typeof window !== 'undefined') {
     localStorage.setItem('admin_api_key', key);
-    document.cookie = `admin_token=${encodeURIComponent(key)}; path=/; max-age=2592000`;
+    const secureFlag = window.location.protocol === 'https:' ? '; Secure' : '';
+    document.cookie = `admin_token=${encodeURIComponent(key)}; path=/; max-age=2592000; SameSite=Strict${secureFlag}`;
   }
 }
 
+/** Returns the stored admin key, or empty string if not set. */
 export function getStoredAdminKey(): string {
   if (typeof window !== 'undefined') {
-    return localStorage.getItem('admin_api_key') || 'mechgirl-admin-2026';
+    return localStorage.getItem('admin_api_key') || '';
   }
-  return 'mechgirl-admin-2026';
+  return '';
 }
 
 export function saveLoggedInUser(user: any, key?: string): void {
@@ -52,7 +57,9 @@ export function getLoggedInUser(): any | null {
     if (raw) {
       try {
         return JSON.parse(raw);
-      } catch {}
+      } catch {
+        return null;
+      }
     }
   }
   return null;
@@ -63,7 +70,8 @@ export function logoutUser(): void {
     localStorage.removeItem('user');
     localStorage.removeItem('admin_user');
     localStorage.removeItem('admin_api_key');
-    document.cookie = 'admin_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+    const secureFlag = window.location.protocol === 'https:' ? '; Secure' : '';
+    document.cookie = `admin_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Strict${secureFlag}`;
   }
 }
 
@@ -114,4 +122,3 @@ export function compressImageFile(file: File, maxWidth = 1000, maxHeight = 1000,
     reader.readAsDataURL(file);
   });
 }
-

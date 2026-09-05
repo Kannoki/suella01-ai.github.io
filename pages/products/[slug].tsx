@@ -4,6 +4,7 @@ import Link from 'next/link';
 import Layout from '../../components/Layout';
 import { AnimatedSection } from '../../components/AnimatedSection';
 import { getProductBySlug, Product } from '../../lib/dataService';
+import { sanitizeHtml } from '../../lib/sanitize';
 
 export const getServerSideProps: GetServerSideProps = async (context) => {
   const slug = context.params?.slug as string;
@@ -143,7 +144,7 @@ export default function ProductDetail({ product }: ProductDetailProps) {
                 </h2>
                 <div
                   className="prose-custom"
-                  dangerouslySetInnerHTML={{ __html: product.content }}
+                  dangerouslySetInnerHTML={{ __html: sanitizeHtml(product.content) }}
                 />
               </div>
             </AnimatedSection>

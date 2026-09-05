@@ -7,6 +7,7 @@ import Modal from '../../components/Modal';
 import { AnimatedSection } from '../../components/AnimatedSection';
 import { getActivityBySlug, Activity, getKnowledgeBySlug, Knowledge } from '../../lib/dataService';
 import { formatActivityDate } from '../../lib/dateUtils';
+import { sanitizeHtml } from '../../lib/sanitize';
 
 export const getServerSideProps: GetServerSideProps = async (context) => {
   const slug = context.params?.slug as string;
@@ -384,7 +385,7 @@ export default function CommonKnowledgeDetail({ activity: initialActivity, artic
                 </h2>
                 <div
                   className="prose-custom"
-                  dangerouslySetInnerHTML={{ __html: activity.content }}
+                  dangerouslySetInnerHTML={{ __html: sanitizeHtml(activity.content) }}
                 />
               </div>
             </AnimatedSection>

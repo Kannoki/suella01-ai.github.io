@@ -2,6 +2,16 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { getKnowledgeList, createKnowledge } from '../../../lib/dataService';
 import { requireAuth } from '../../../lib/auth';
 
+/**
+ * Strips author PII (email) from knowledge articles before returning them publicly.
+ * Email is only needed for admin moderation views and should never be exposed to anonymous visitors.
+ */
+function sanitizeKnowledgeForPublic(article: any) {
+  if (!article) return article;
+  const { authorEmail, ...safe } = article;
+  return safe;
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method === 'GET') {
     try {
@@ -11,7 +21,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         authorEmail: typeof authorEmail === 'string' ? authorEmail : undefined,
         search: typeof search === 'string' ? search : undefined,
       });
-      return res.status(200).json(list);
+      // Strip authorEmail from every public article
+      return res.status(200).json(list.map(sanitizeKnowledgeForPublic));
     } catch (err: any) {
       return res.status(500).json({ error: err.message || 'Failed to fetch knowledge articles' });
     }
@@ -42,7 +53,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         tags: Array.isArray(tags) ? tags : [],
       });
 
-      return res.status(201).json(created);
+      return res.status(201).json(sanitizeKnowledgeForPublic(created));
     } catch (err: any) {
       return res.status(500).json({ error: err.message || 'Failed to create knowledge article' });
     }

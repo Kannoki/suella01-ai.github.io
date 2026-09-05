@@ -45,9 +45,13 @@ services:
         condition: service_healthy
     environment:
       DATABASE_URL: "postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-mechgirl}"
-      SECRET: ${SECRET:-mechgirl-suella-secret-key-32charsmin!}
+      # Required: provide NEXTAUTH_SECRET / SECRET via .env (no hardcoded fallback).
+      # Without these, the auth layer will refuse all requests at runtime.
       NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost}
-      NEXTAUTH_SECRET: ${SECRET:-mechgirl-suella-secret-key-32charsmin!}
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:-}
+      SECRET: ${SECRET:-}
+      ADMIN_API_KEY: ${ADMIN_API_KEY:-}
+      ADMIN_BOOTSTRAP_PASSWORD: ${ADMIN_BOOTSTRAP_PASSWORD:-}
       GITHUB_ID: ${GITHUB_ID:-}
       GITHUB_SECRET: ${GITHUB_SECRET:-}
       NODE_ENV: production
@@ -56,10 +60,11 @@ services:
     # web is not exposed directly — traffic flows through Nginx
     expose:
       - "3000"
-    # Run DB migrations then start the app
+    # Run DB migrations then start the app. We require a real migrate deploy;
+    # if migrations fail (e.g. baseline db) we surface the error rather than
+    # silently dropping/overwriting columns with `db push --accept-data-loss`.
     command: >
-      sh -c "npx prisma migrate deploy 2>/dev/null || npx prisma db push --accept-data-loss &&
-             node server.js"
+      sh -c "npx prisma migrate deploy && node server.js"
 
   # ── Nginx Reverse Proxy ──────────────────────────────────────────────────
   nginx:

@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { saveLoggedInUser } from '../../../lib/clientAuth';
+import prisma from '../../../lib/prisma';
+import { hashPassword } from '../../../lib/passwords';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -13,26 +14,55 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(400).json({ error: 'Name, email, and password are required' });
   }
 
-  if (password.length < 6) {
+  if (typeof password !== 'string' || password.length < 6) {
     return res.status(400).json({ error: 'Password must be at least 6 characters' });
   }
 
-  // For this site, registration just creates a local profile.
-  // In production you'd persist to DB; here we return a user object for localStorage.
-  const user = {
-    id: `user-${Date.now()}`,
-    name: name.trim(),
-    email: email.toLowerCase().trim(),
-    role: 'user',
-    tagline: 'MechGirl Community Member',
-    image: null,
-    bio: '',
-  };
+  const normalizedEmail = String(email).toLowerCase().trim();
 
-  return res.status(200).json({
-    success: true,
-    message: 'Account created successfully',
-    token: password,
-    user,
-  });
+  // Basic email format validation
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+    return res.status(400).json({ error: 'Invalid email format' });
+  }
+
+  try {
+    // Reject duplicate emails
+    const existing = await prisma.user.findUnique({ where: { email: normalizedEmail } });
+    if (existing) {
+      return res.status(409).json({ error: 'An account with that email already exists' });
+    }
+
+    const passwordHash = await hashPassword(password);
+
+    const created = await prisma.user.create({
+      data: {
+        name: String(name).trim(),
+        email: normalizedEmail,
+        role: 'user',
+        passwordHash,
+        tagline: 'MechGirl Community Member',
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        tagline: true,
+        image: true,
+        bio: true,
+      },
+    });
+
+    // Return a non-sensitive payload (no passwordHash) — the client logs the user in
+    // and stores the JWT from NextAuth, not a raw password.
+    return res.status(201).json({
+      success: true,
+      message: 'Account created successfully',
+      user: created,
+    });
+  } catch (err: any) {
+    // eslint-disable-next-line no-console
+    console.error('[/api/auth/register] error:', err);
+    return res.status(500).json({ error: 'Failed to create account. Please try again later.' });
+  }
 }

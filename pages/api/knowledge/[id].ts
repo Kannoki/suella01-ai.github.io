@@ -2,6 +2,12 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { getKnowledgeById, updateKnowledge, deleteKnowledge, confirmKnowledge } from '../../../lib/dataService';
 import { requireAuth } from '../../../lib/auth';
 
+function sanitizeKnowledgeForPublic(article: any) {
+  if (!article) return article;
+  const { authorEmail, ...safe } = article;
+  return safe;
+}
+
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { id } = req.query;
 
@@ -15,7 +21,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (!article) {
         return res.status(404).json({ error: 'Knowledge article not found' });
       }
-      return res.status(200).json(article);
+      return res.status(200).json(sanitizeKnowledgeForPublic(article));
     } catch (err: any) {
       return res.status(500).json({ error: err.message || 'Failed to fetch article' });
     }
@@ -32,14 +38,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         if (!updated) {
           return res.status(404).json({ error: 'Article not found' });
         }
-        return res.status(200).json(updated);
+        return res.status(200).json(sanitizeKnowledgeForPublic(updated));
       }
 
       const updated = await updateKnowledge(id, req.body);
       if (!updated) {
         return res.status(404).json({ error: 'Article not found' });
       }
-      return res.status(200).json(updated);
+      return res.status(200).json(sanitizeKnowledgeForPublic(updated));
     } catch (err: any) {
       return res.status(500).json({ error: err.message || 'Failed to update article' });
     }

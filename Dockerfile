@@ -43,6 +43,12 @@ COPY --from=builder /app/package.json     ./package.json
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static     ./.next/static
 
+# Prisma client must be present at runtime, since standalone output only includes app code.
+# Generated client lives at node_modules/@prisma/client and node_modules/.prisma/client (or
+# node_modules/prisma/generated for newer versions). Copy both to be safe across versions.
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma ./node_modules/@prisma
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
+
 USER nextjs
 
 EXPOSE 3000

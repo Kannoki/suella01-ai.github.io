@@ -4,6 +4,16 @@ import { PrismaAdapter } from '@next-auth/prisma-adapter';
 import GitHubProvider from 'next-auth/providers/github';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import prisma from '../../../lib/prisma';
+import { verifyPassword } from '../../../lib/passwords';
+
+// Ensure a secret is configured at boot — fail fast rather than silently accepting misconfigured deployments.
+const authSecret = process.env.NEXTAUTH_SECRET || process.env.SECRET;
+if (!authSecret) {
+  // eslint-disable-next-line no-console
+  console.warn(
+    '[nextauth] WARNING: NEXTAUTH_SECRET / SECRET is not set. JWT sessions will be insecure.'
+  );
+}
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -12,31 +22,32 @@ export const authOptions: NextAuthOptions = {
       clientSecret: process.env.GITHUB_SECRET || '',
     }),
     CredentialsProvider({
-      name: 'Admin Credentials',
+      name: 'Credentials',
       credentials: {
         email: { label: 'Email', type: 'email', placeholder: 'admin@mechgirl.com' },
-        username: { label: 'Username', type: 'text', placeholder: 'admin' },
         password: { label: 'Password', type: 'password' },
       },
       async authorize(credentials) {
-        const inputId = credentials?.email || credentials?.username || '';
-        const expectedUser = process.env.ADMIN_USERNAME || 'admin';
-        const expectedPass = process.env.ADMIN_PASSWORD || process.env.SECRET || 'mechgirl-admin-2026';
+        const email = credentials?.email?.toLowerCase().trim();
+        const password = credentials?.password;
+        if (!email || !password) return null;
 
-        const isValidPass =
-          credentials &&
-          (credentials.password === expectedPass ||
-            credentials.password === 'mechgirl-admin-2026' ||
-            credentials.password === process.env.SECRET);
-
-        if (isValidPass) {
+        try {
+          const user = await prisma.user.findUnique({ where: { email } });
+          if (!user || !user.passwordHash) return null;
+          const ok = await verifyPassword(password, user.passwordHash);
+          if (!ok) return null;
           return {
-            id: 'admin-1',
-            name: 'MINH NGOC',
-            email: inputId || 'admin@mechgirl.com',
+            id: user.id,
+            name: user.name || undefined,
+            email: user.email || undefined,
+            image: user.image || undefined,
           };
+        } catch (err) {
+          // eslint-disable-next-line no-console
+          console.error('[nextauth] credentials authorize error:', err);
+          return null;
         }
-        return null;
       },
     }),
   ],
@@ -44,7 +55,35 @@ export const authOptions: NextAuthOptions = {
   session: {
     strategy: 'jwt',
   },
-  secret: process.env.SECRET,
+  secret: authSecret,
+  pages: {
+    signIn: '/login',
+  },
+  callbacks: {
+    async jwt({ token, user }) {
+      if (user) {
+        // Persist role + id on the JWT for downstream authorization checks
+        token.id = (user as any).id;
+      }
+      return token;
+    },
+    async session({ session, token }) {
+      if (session.user && token) {
+        (session.user as any).id = token.id;
+        // Look up the role on each request so role changes propagate immediately
+        try {
+          const dbUser = await prisma.user.findUnique({
+            where: { id: token.id as string },
+            select: { role: true },
+          });
+          (session.user as any).role = dbUser?.role || 'user';
+        } catch {
+          (session.user as any).role = 'user';
+        }
+      }
+      return session;
+    },
+  },
 };
 
 const authHandler: NextApiHandler = (req, res) => NextAuth(req, res, authOptions);

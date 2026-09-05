@@ -1,6 +1,31 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { getServerSession } from 'next-auth/next';
 import { getUserById, updateUser, deleteUser } from '../../../lib/dataService';
-import { requireAuth } from '../../../lib/auth';
+import { checkAuth } from '../../../lib/auth';
+import { authOptions } from '../auth/[...nextauth]';
+
+/**
+ * Returns true if the request is authenticated as an admin (either via API key
+ * or a NextAuth session whose user has role === 'admin').
+ */
+async function isAdminRequest(req: NextApiRequest): Promise<boolean> {
+  // First, fast path: API key / cookie via lib/auth.ts
+  const ok = await checkAuth(req);
+  if (!ok) return false;
+
+  // Additionally check the role for role-gated updates (e.g. role/passwordHash changes)
+  try {
+    const session: any = await getServerSession(req, ({} as unknown) as any, authOptions);
+    if (session?.user?.role === 'admin') return true;
+  } catch {
+    // ignore
+  }
+
+  // If authenticated via API key only (no NextAuth session), allow self-service
+  // updates below — but never allow role or passwordHash changes without a
+  // verified admin session.
+  return false;
+}
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   const { id } = req.query;
@@ -15,26 +40,44 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       if (!user) {
         return res.status(404).json({ error: 'User not found' });
       }
-      return res.status(200).json(user);
+      const { passwordHash, ...safe } = user as any;
+      return res.status(200).json(safe);
     } catch (err: any) {
       return res.status(500).json({ error: err.message || 'Failed to fetch user' });
     }
   }
 
   if (req.method === 'PUT') {
-    const isAuthed = await requireAuth(req, res);
-    if (!isAuthed) return;
+    const isAuthed = await checkAuth(req);
+    if (!isAuthed) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    // Privilege-escalation guard: only an admin (NextAuth session with role==='admin')
+    // may change `role` or `passwordHash`. API-key-only callers are rejected for these fields.
+    const adminOnly = ['role', 'passwordHash'];
+    const bodyKeys = Object.keys(req.body || {});
+    const hasAdminField = adminOnly.some((k) => bodyKeys.includes(k));
+    if (hasAdminField) {
+      const admin = await isAdminRequest(req);
+      if (!admin) {
+        return res.status(403).json({
+          error: 'Only administrators may change role or password.',
+        });
+      }
+    }
 
     try {
       const updated = await updateUser(id, req.body);
-      return res.status(200).json(updated);
+      const { passwordHash, ...safe } = updated as any;
+      return res.status(200).json(safe);
     } catch (err: any) {
       return res.status(500).json({ error: err.message || 'Failed to update user' });
     }
   }
 
   if (req.method === 'DELETE') {
-    const isAuthed = await requireAuth(req, res);
+    const isAuthed = await checkAuth(req);
     if (!isAuthed) return;
 
     try {

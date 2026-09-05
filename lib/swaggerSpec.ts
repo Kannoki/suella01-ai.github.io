@@ -4,7 +4,7 @@ export const swaggerSpec = {
     title: 'MechGirl Portal API',
     version: '1.0.0',
     description:
-      'Comprehensive REST API documentation and management interface for MechGirl - Empowering Women in Mechanics, Robotics & STEM.\n\nManage activities, projects, hero carousel slides, profile information, contact messages, and publications.\n\n### Authentication\nAll mutation endpoints (`POST`, `PUT`, `DELETE`) are protected by authentication. You can authenticate using:\n- **Bearer Token**: Click **Authorize** and enter `mechgirl-admin-2026` or your secret key.\n- **API Key**: Enter key in `x-admin-key` header.\n- **NextAuth Session**: Automatically sent when logged in via cookie.',
+      'Comprehensive REST API documentation and management interface for MechGirl - Empowering Women in Mechanics, Robotics & STEM.\n\nManage activities, projects, hero carousel slides, profile information, contact messages, and publications.\n\n### Authentication\nAll mutation endpoints (`POST`, `PUT`, `DELETE`) are protected by authentication. You can authenticate using any of:\n- **Bearer Token**: Click **Authorize** and enter your `ADMIN_API_KEY` (or `NEXTAUTH_SECRET` / `SECRET`).\n- **API Key**: Enter the same value in the `x-admin-key` header.\n- **NextAuth Session**: Automatically sent when logged in via cookie.',
     contact: {
       name: 'MechGirl Admin',
       email: 'contact@mechgirl.com',
@@ -46,7 +46,7 @@ export const swaggerSpec = {
                 required: ['email', 'password'],
                 properties: {
                   email: { type: 'string', format: 'email', example: 'admin@mechgirl.com' },
-                  password: { type: 'string', format: 'password', example: 'mechgirl-admin-2026' },
+                  password: { type: 'string', format: 'password', example: 'YOUR_ADMIN_PASSWORD' },
                 },
               },
             },
@@ -62,7 +62,6 @@ export const swaggerSpec = {
                   properties: {
                     success: { type: 'boolean', example: true },
                     message: { type: 'string', example: 'Login successful' },
-                    token: { type: 'string', example: 'mechgirl-admin-2026' },
                     user: { $ref: '#/components/schemas/User' },
                   },
                 },
@@ -1061,13 +1060,13 @@ export const swaggerSpec = {
         scheme: 'bearer',
         bearerFormat: 'API Key or Token',
         description:
-          'Enter your Admin Key (e.g. `mechgirl-admin-2026` or SECRET from .env) or NextAuth JWT token.',
+          'Enter your `ADMIN_API_KEY` (or `NEXTAUTH_SECRET` / `SECRET` from `.env`) or a NextAuth JWT token obtained via `/api/auth/callback/credentials`.',
       },
       apiKeyAuth: {
         type: 'apiKey',
         in: 'header',
         name: 'x-admin-key',
-        description: 'Custom Admin API Key header (e.g. `mechgirl-admin-2026`).',
+        description: 'Same key as `ADMIN_API_KEY`, sent in the `x-admin-key` header.',
       },
     },
     schemas: {
