@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getKnowledgeList, createKnowledge } from '../../../lib/dataService';
 import { requireAuth } from '../../../lib/auth';
+import { KnowledgeCategory, KnowledgeStatus } from '../../../prisma/generated/enums';
 
 /**
  * Strips author PII (email) from knowledge articles before returning them publicly.
@@ -16,8 +17,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (req.method === 'GET') {
     try {
       const { status, authorEmail, search } = req.query;
+      let statusFilter: KnowledgeStatus | 'all' | undefined = undefined;
+      if (typeof status === 'string') {
+        const s = status.toUpperCase();
+        if (status === 'all') {
+          statusFilter = 'all';
+        } else if (s === 'CONFIRMED') {
+          statusFilter = KnowledgeStatus.CONFIRMED;
+        } else if (s === 'PENDING') {
+          statusFilter = KnowledgeStatus.PENDING;
+        } else if (s === 'REJECTED') {
+          statusFilter = KnowledgeStatus.REJECTED;
+        }
+      }
       const list = await getKnowledgeList({
-        status: typeof status === 'string' ? status : undefined,
+        status: statusFilter,
         authorEmail: typeof authorEmail === 'string' ? authorEmail : undefined,
         search: typeof search === 'string' ? search : undefined,
       });
@@ -41,11 +55,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       const created = await createKnowledge({
         title,
-        category: category || 'Engineering',
+        category: category || KnowledgeCategory.ENGINEERING,
         summary: summary || '',
         content,
         image: image || null,
-        status: status || 'pending',
+        status: status || KnowledgeStatus.PENDING,
         authorId: authorId || null,
         authorName: authorName || 'Community Member',
         authorEmail: authorEmail || null,

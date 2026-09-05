@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { AboutProfile, TimelineItem } from '../../lib/dataService';
+import type { AboutProfile, TimelineItem } from '../../lib/dataService';
 import { getAuthHeaders, compressImageFile } from '../../lib/clientAuth';
 
 export default function AboutTab() {

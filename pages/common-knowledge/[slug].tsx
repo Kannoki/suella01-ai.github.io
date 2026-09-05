@@ -5,7 +5,8 @@ import { motion } from 'framer-motion';
 import Layout from '../../components/Layout';
 import Modal from '../../components/Modal';
 import { AnimatedSection } from '../../components/AnimatedSection';
-import { getActivityBySlug, Activity, getKnowledgeBySlug, Knowledge } from '../../lib/dataService';
+import { getActivityBySlug, type Activity, getKnowledgeBySlug, type Knowledge } from '../../lib/dataService';
+import { ActivityStatus } from '../../prisma/generated/enums';
 import { formatActivityDate } from '../../lib/dateUtils';
 import { sanitizeHtml } from '../../lib/sanitize';
 
@@ -276,7 +277,7 @@ export default function CommonKnowledgeDetail({ activity: initialActivity, artic
     setActivity((prev) => (prev ? {
       ...prev,
       registered: prev.registered + 1,
-      status: prev.registered + 1 >= prev.seats ? 'full' : 'open',
+      status: prev.registered + 1 >= prev.seats ? ActivityStatus.FULL : ActivityStatus.OPEN,
     } : undefined));
   };
 

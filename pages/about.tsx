@@ -3,13 +3,14 @@ import type { GetStaticProps } from 'next';
 import { motion } from 'framer-motion';
 import Layout from '../components/Layout';
 import { AnimatedSection, AnimatedStagger, StaggerItem } from '../components/AnimatedSection';
-import { getAboutProfile, AboutProfile, getUsers, User } from '../lib/dataService';
+import { getAboutProfile, type AboutProfile, getUsers, type User } from '../lib/dataService';
+import { Role } from '../prisma/generated/enums';
 
 export const getStaticProps: GetStaticProps = async () => {
   try {
     const profile = await getAboutProfile();
     const allUsers = await getUsers();
-    const contributors = allUsers.filter((u) => u.role === 'admin' || u.role === 'author');
+    const contributors = allUsers.filter((u) => u.role === Role.ADMIN || u.role === Role.AUTHOR);
     return {
       props: {
         profile,
@@ -104,14 +105,14 @@ function ContributorCard({ user }: { user: User }) {
     .join('');
 
   const roleBadgeColor =
-    user.role === 'admin'
+    user.role === Role.ADMIN
       ? 'bg-purple-100 text-purple-700 border-purple-200/60'
-      : user.role === 'author'
+      : user.role === Role.AUTHOR
       ? 'bg-pink-100 text-pink-700 border-pink-200/60'
       : 'bg-gray-100 text-gray-700 border-gray-200/60';
 
   const roleLabel =
-    user.role === 'admin' ? 'Administrator' : user.role === 'author' ? 'Author & Contributor' : 'Contributor';
+    user.role === Role.ADMIN ? 'Administrator' : user.role === Role.AUTHOR ? 'Author & Contributor' : 'Contributor';
 
   const latestTimeline = user.timeline && user.timeline.length > 0 ? user.timeline[0] : null;
 

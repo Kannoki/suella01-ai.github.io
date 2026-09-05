@@ -3,7 +3,7 @@ import type { GetStaticProps } from 'next';
 import { motion } from 'framer-motion';
 import Layout from '../components/Layout';
 import { AnimatedSection } from '../components/AnimatedSection';
-import { getContactInfo, ContactInfo } from '../lib/dataService';
+import { getContactInfo, type ContactInfo } from '../lib/dataService';
 
 export const getStaticProps: GetStaticProps = async () => {
   try {

@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth/next';
 import { getUsers, createUser } from '../../../lib/dataService';
 import { checkAuth } from '../../../lib/auth';
 import { authOptions } from '../auth/[...nextauth]';
+import { Role } from '../../../prisma/generated/enums';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method === 'GET') {
@@ -21,11 +22,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(401).json({ error: 'Authentication required' });
     }
 
-    // Only admin (NextAuth session with role==='admin') can create users
+    // Only admin (NextAuth session with role === Role.ADMIN) can create users
     let isAdmin = false;
     try {
       const session: any = await getServerSession(req, ({} as unknown) as any, authOptions);
-      if (session?.user?.role === 'admin') isAdmin = true;
+      if (session?.user?.role === Role.ADMIN) isAdmin = true;
     } catch {
       // ignore
     }
@@ -47,7 +48,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         image: image || null,
         tagline: tagline || null,
         bio: bio || null,
-        role: role || 'user',
+        role: role || Role.USER,
         timeline: timeline || [],
       });
 

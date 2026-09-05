@@ -3,12 +3,21 @@ import Link from 'next/link';
 import type { Activity } from '../../lib/dataService';
 import { formatActivityDate } from '../../lib/dateUtils';
 import { getAuthHeaders } from '../../lib/clientAuth';
+import { ActivityType, ActivityStatus } from '../../prisma/generated/enums';
+
+const TYPE_FILTERS: (ActivityType | 'All')[] = [
+  'All',
+  ActivityType.WORKSHOP,
+  ActivityType.CHALLENGE,
+  ActivityType.MASTERCLASS,
+  ActivityType.PANEL,
+];
 
 export default function ActivitiesTab() {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
-  const [selectedType, setSelectedType] = useState('All');
+  const [selectedType, setSelectedType] = useState<ActivityType | 'All'>('All');
 
   const fetchActivities = async () => {
     setLoading(true);
@@ -47,7 +56,7 @@ export default function ActivitiesTab() {
   };
 
   const filtered = activities.filter((act) => {
-    const matchType = selectedType === 'All' || act.type.toLowerCase() === selectedType.toLowerCase();
+    const matchType = selectedType === 'All' || act.type === selectedType;
     const matchSearch =
       !search ||
       act.title.toLowerCase().includes(search.toLowerCase()) ||
@@ -78,7 +87,7 @@ export default function ActivitiesTab() {
       {/* Filter and Search */}
       <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-soft flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-1.5 flex-wrap">
-          {['All', 'Workshop', 'Challenge', 'Masterclass', 'Panel'].map((t) => (
+          {TYPE_FILTERS.map((t) => (
             <button
               key={t}
               onClick={() => setSelectedType(t)}
@@ -121,7 +130,7 @@ export default function ActivitiesTab() {
                   <span className="badge bg-purple-100 text-purple-700">{act.type}</span>
                   <span className="text-xs text-gray-400 font-mono">/{act.slug}</span>
                   <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded-full ${
-                    act.status === 'open' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
+                    act.status === ActivityStatus.OPEN ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
                   }`}>
                     {act.status}
                   </span>

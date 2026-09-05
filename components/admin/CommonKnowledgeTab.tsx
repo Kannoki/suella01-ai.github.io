@@ -1,18 +1,34 @@
 import React, { useEffect, useState } from 'react';
-import { Knowledge } from '../../lib/dataService';
+import type { Knowledge } from '../../lib/dataService';
 import { getAuthHeaders, compressImageFile } from '../../lib/clientAuth';
+import { KnowledgeCategory, KnowledgeStatus } from '../../prisma/generated/enums';
 
 interface CommonKnowledgeTabProps {
   currentUser?: any | null;
   isAdmin: boolean;
 }
 
-const CATEGORIES = ['Robotics', 'Mechanics', 'Engineering', 'AI & Vision', 'IoT & Hardware', 'Programming', 'General'];
+const CATEGORIES: KnowledgeCategory[] = [
+  KnowledgeCategory.ROBOTICS,
+  KnowledgeCategory.MECHANICS,
+  KnowledgeCategory.ENGINEERING,
+  KnowledgeCategory.AI_And_Vision,
+  KnowledgeCategory.IoT_And_Hardware,
+  KnowledgeCategory.PROGRAMMING,
+  KnowledgeCategory.GENERAL,
+];
+
+const STATUS_FILTERS: (KnowledgeStatus | 'all')[] = [
+  'all',
+  KnowledgeStatus.PENDING,
+  KnowledgeStatus.CONFIRMED,
+  KnowledgeStatus.REJECTED,
+];
 
 export default function CommonKnowledgeTab({ currentUser, isAdmin }: CommonKnowledgeTabProps) {
   const [articles, setArticles] = useState<Knowledge[]>([]);
   const [loading, setLoading] = useState(false);
-  const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [filterStatus, setFilterStatus] = useState<KnowledgeStatus | 'all'>('all');
   const [search, setSearch] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [editingArticle, setEditingArticle] = useState<Knowledge | null>(null);
@@ -22,7 +38,7 @@ export default function CommonKnowledgeTab({ currentUser, isAdmin }: CommonKnowl
   // Form State
   const [form, setForm] = useState({
     title: '',
-    category: 'Engineering',
+    category: KnowledgeCategory.ENGINEERING as KnowledgeCategory,
     summary: '',
     content: '',
     image: '',
@@ -52,7 +68,7 @@ export default function CommonKnowledgeTab({ currentUser, isAdmin }: CommonKnowl
     setEditingArticle(null);
     setForm({
       title: '',
-      category: 'Engineering',
+      category: KnowledgeCategory.ENGINEERING,
       summary: '',
       content: '',
       image: '',
@@ -65,7 +81,7 @@ export default function CommonKnowledgeTab({ currentUser, isAdmin }: CommonKnowl
     setEditingArticle(art);
     setForm({
       title: art.title,
-      category: art.category || 'Engineering',
+      category: art.category || KnowledgeCategory.ENGINEERING,
       summary: art.summary || '',
       content: art.content || '',
       image: art.image || '',
@@ -101,7 +117,7 @@ export default function CommonKnowledgeTab({ currentUser, isAdmin }: CommonKnowl
       payload.authorEmail = currentUser?.email || 'user@mechgirl.com';
       payload.authorImage = currentUser?.image || null;
       // Admins publish immediately; regular users submit as pending review
-      payload.status = isAdmin ? 'confirmed' : 'pending';
+      payload.status = isAdmin ? KnowledgeStatus.CONFIRMED : KnowledgeStatus.PENDING;
       payload.confirmed = isAdmin;
     }
 
@@ -150,7 +166,7 @@ export default function CommonKnowledgeTab({ currentUser, isAdmin }: CommonKnowl
       const res = await fetch(`/api/knowledge/${id}`, {
         method: 'PUT',
         headers: getAuthHeaders(),
-        body: JSON.stringify({ confirmed: true, status: 'confirmed' }),
+        body: JSON.stringify({ confirmed: true, status: KnowledgeStatus.CONFIRMED }),
       });
       if (res.ok) {
         setFeedback({
@@ -176,7 +192,7 @@ export default function CommonKnowledgeTab({ currentUser, isAdmin }: CommonKnowl
       const res = await fetch(`/api/knowledge/${id}`, {
         method: 'PUT',
         headers: getAuthHeaders(),
-        body: JSON.stringify({ confirmed: false, status: 'rejected' }),
+        body: JSON.stringify({ confirmed: false, status: KnowledgeStatus.REJECTED }),
       });
       if (res.ok) {
         setFeedback({
@@ -243,7 +259,7 @@ export default function CommonKnowledgeTab({ currentUser, isAdmin }: CommonKnowl
     // If not admin, user sees all confirmed articles PLUS their own pending/rejected articles
     if (!isAdmin && currentUser?.email) {
       const isAuthor = art.authorEmail?.toLowerCase() === currentUser.email.toLowerCase();
-      const isConfirmed = art.status === 'confirmed';
+      const isConfirmed = art.status === KnowledgeStatus.CONFIRMED;
       if (!isAuthor && !isConfirmed) {
         return false;
       }
@@ -266,9 +282,9 @@ export default function CommonKnowledgeTab({ currentUser, isAdmin }: CommonKnowl
     return true;
   });
 
-  const pendingCount = articles.filter((a) => a.status === 'pending').length;
-  const confirmedCount = articles.filter((a) => a.status === 'confirmed').length;
-  const rejectedCount = articles.filter((a) => a.status === 'rejected').length;
+  const pendingCount = articles.filter((a) => a.status === KnowledgeStatus.PENDING).length;
+  const confirmedCount = articles.filter((a) => a.status === KnowledgeStatus.CONFIRMED).length;
+  const rejectedCount = articles.filter((a) => a.status === KnowledgeStatus.REJECTED).length;
 
   return (
     <div className="space-y-6">
@@ -333,9 +349,9 @@ export default function CommonKnowledgeTab({ currentUser, isAdmin }: CommonKnowl
             </button>
 
             <button
-              onClick={() => setFilterStatus('pending')}
+              onClick={() => setFilterStatus(KnowledgeStatus.PENDING)}
               className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
-                filterStatus === 'pending'
+                filterStatus === KnowledgeStatus.PENDING
                   ? 'bg-amber-500 text-white shadow-sm'
                   : 'bg-amber-50 text-amber-800 hover:bg-amber-100'
               }`}
@@ -344,9 +360,9 @@ export default function CommonKnowledgeTab({ currentUser, isAdmin }: CommonKnowl
             </button>
 
             <button
-              onClick={() => setFilterStatus('confirmed')}
+              onClick={() => setFilterStatus(KnowledgeStatus.CONFIRMED)}
               className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
-                filterStatus === 'confirmed'
+                filterStatus === KnowledgeStatus.CONFIRMED
                   ? 'bg-emerald-600 text-white shadow-sm'
                   : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100'
               }`}
@@ -356,9 +372,9 @@ export default function CommonKnowledgeTab({ currentUser, isAdmin }: CommonKnowl
 
             {isAdmin && (
               <button
-                onClick={() => setFilterStatus('rejected')}
+                onClick={() => setFilterStatus(KnowledgeStatus.REJECTED)}
                 className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
-                  filterStatus === 'rejected'
+                  filterStatus === KnowledgeStatus.REJECTED
                     ? 'bg-red-600 text-white shadow-sm'
                     : 'bg-red-50 text-red-800 hover:bg-red-100'
                 }`}
@@ -402,7 +418,7 @@ export default function CommonKnowledgeTab({ currentUser, isAdmin }: CommonKnowl
           </div>
           <h3 className="text-sm font-semibold text-brandDark">No Knowledge Articles Found</h3>
           <p className="text-xs text-gray-500 max-w-md mx-auto">
-            {filterStatus === 'pending'
+            {filterStatus === KnowledgeStatus.PENDING
               ? 'There are currently no articles pending review.'
               : 'Be the first to share an engineering tutorial, guide, or hardware breakdown!'}
           </p>
@@ -433,16 +449,16 @@ export default function CommonKnowledgeTab({ currentUser, isAdmin }: CommonKnowl
                     </span>
                     <span
                       className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full ${
-                        art.status === 'confirmed'
+                        art.status === KnowledgeStatus.CONFIRMED
                           ? 'bg-emerald-100 text-emerald-800'
-                          : art.status === 'pending'
+                          : art.status === KnowledgeStatus.PENDING
                           ? 'bg-amber-100 text-amber-800'
                           : 'bg-red-100 text-red-800'
                       }`}
                     >
-                      {art.status === 'confirmed'
+                      {art.status === KnowledgeStatus.CONFIRMED
                         ? 'Confirmed & Published'
-                        : art.status === 'pending'
+                        : art.status === KnowledgeStatus.PENDING
                         ? 'Pending Confirmation'
                         : 'Rejected'}
                     </span>
@@ -500,7 +516,7 @@ export default function CommonKnowledgeTab({ currentUser, isAdmin }: CommonKnowl
                 <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-gray-100">
                   <div className="flex items-center gap-1.5">
                     {/* Admin Confirmation Action */}
-                    {isAdmin && art.status === 'pending' && (
+                    {isAdmin && art.status === KnowledgeStatus.PENDING && (
                       <button
                         onClick={() => handleConfirm(art.id, art.title)}
                         disabled={actionLoading}
@@ -510,7 +526,7 @@ export default function CommonKnowledgeTab({ currentUser, isAdmin }: CommonKnowl
                       </button>
                     )}
 
-                    {isAdmin && art.status === 'pending' && (
+                    {isAdmin && art.status === KnowledgeStatus.PENDING && (
                       <button
                         onClick={() => handleReject(art.id, art.title)}
                         disabled={actionLoading}
@@ -520,7 +536,7 @@ export default function CommonKnowledgeTab({ currentUser, isAdmin }: CommonKnowl
                       </button>
                     )}
 
-                    {isAdmin && art.status === 'rejected' && (
+                    {isAdmin && art.status === KnowledgeStatus.REJECTED && (
                       <button
                         onClick={() => handleConfirm(art.id, art.title)}
                         disabled={actionLoading}
@@ -603,7 +619,7 @@ export default function CommonKnowledgeTab({ currentUser, isAdmin }: CommonKnowl
                   </label>
                   <select
                     value={form.category}
-                    onChange={(e) => setForm({ ...form, category: e.target.value })}
+                    onChange={(e) => setForm({ ...form, category: e.target.value as KnowledgeCategory })}
                     className="input-field text-xs"
                   >
                     {CATEGORIES.map((c) => (

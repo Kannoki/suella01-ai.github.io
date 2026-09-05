@@ -10,10 +10,11 @@ import {
   getActivities,
   getProducts,
   getCarouselSlides,
-  Activity,
-  Product,
-  CarouselSlide,
+  type Activity,
+  type Product,
+  type CarouselSlide,
 } from '../lib/dataService';
+import { ActivityStatus } from '../prisma/generated/enums';
 import { formatActivityDate } from '../lib/dateUtils';
 
 export const getStaticProps: GetStaticProps = async () => {
@@ -54,13 +55,14 @@ interface HomeProps {
 }
 
 function activityTypeColor(type: string) {
+  const t = (type || '').toUpperCase();
   const map: Record<string, string> = {
-    Workshop: 'bg-purple-100/70 text-purple-700',
-    Challenge: 'bg-pink-100/70 text-pink-600',
-    Masterclass: 'bg-emerald-100/70 text-emerald-700',
-    Panel: 'bg-blue-100/70 text-blue-700',
+    WORKSHOP: 'bg-purple-100/70 text-purple-700',
+    CHALLENGE: 'bg-pink-100/70 text-pink-600',
+    MASTERCLASS: 'bg-emerald-100/70 text-emerald-700',
+    PANEL: 'bg-blue-100/70 text-blue-700',
   };
-  return map[type] || 'bg-gray-100 text-gray-700';
+  return map[t] || 'bg-gray-100 text-gray-700';
 }
 
 function categoryColor(cat: string) {
@@ -144,7 +146,7 @@ export default function Home({ upcomingActivities = [], featuredProducts = [], s
                             <span className={`badge ${activityTypeColor(activity.type)}`}>
                               {activity.type}
                             </span>
-                            {activity.status === 'full' && (
+                            {activity.status === ActivityStatus.FULL && (
                               <span className="badge bg-red-100 text-red-600">Full</span>
                             )}
                           </div>

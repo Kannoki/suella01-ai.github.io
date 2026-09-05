@@ -20,6 +20,12 @@ const nextConfig = {
         ...config.resolve.fallback,
         fs: false,
         path: false,
+        net: false,
+        tls: false,
+        dns: false,
+        pg: false,
+        '@prisma/adapter-pg': false,
+        'pg-native': false,
       };
     }
     return config;

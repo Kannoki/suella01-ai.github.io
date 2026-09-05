@@ -1,5 +1,6 @@
 import { PrismaClient, Prisma } from './generated/client';
 import { PrismaPg } from "@prisma/adapter-pg";
+import { Role } from './generated/enums';
 import fs from 'fs';
 import path from 'path';
 
@@ -36,7 +37,7 @@ async function main() {
         tagline: u.tagline,
         bio: u.bio,
         image: u.image,
-        role: u.role || 'user',
+        role: u.role || Role.USER,
         timeline: u.timeline || [],
       },
       create: {
@@ -46,7 +47,7 @@ async function main() {
         tagline: u.tagline,
         bio: u.bio,
         image: u.image,
-        role: u.role || 'user',
+        role: u.role || Role.USER,
         timeline: u.timeline || [],
       },
     });

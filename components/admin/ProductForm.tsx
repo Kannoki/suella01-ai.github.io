@@ -1,15 +1,21 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
-import { Product } from '../../lib/dataService';
+import type { Product } from '../../lib/dataService';
 import { getAuthHeaders } from '../../lib/clientAuth';
+import { ProductCategory } from '../../prisma/generated/enums';
 
 interface ProductFormProps {
   initialData?: Product | null;
   isNew?: boolean;
 }
 
-const CATEGORY_OPTIONS = ['Robotics', 'Knowledge', 'IoT', 'Mechatronics'];
+const CATEGORY_OPTIONS: ProductCategory[] = [
+  ProductCategory.ROBOTICS,
+  ProductCategory.KNOWLEDGE,
+  ProductCategory.IOT,
+  ProductCategory.MECHATRONICS,
+];
 
 export default function ProductForm({ initialData, isNew = false }: ProductFormProps) {
   const router = useRouter();
@@ -18,7 +24,7 @@ export default function ProductForm({ initialData, isNew = false }: ProductFormP
 
   const [form, setForm] = useState({
     title: initialData?.title || '',
-    category: initialData?.category || 'Robotics',
+    category: initialData?.category || ProductCategory.ROBOTICS,
     description: initialData?.description || '',
     content: initialData?.content || '',
     image: initialData?.image || '',
@@ -134,7 +140,7 @@ export default function ProductForm({ initialData, isNew = false }: ProductFormP
           </label>
           <select
             value={form.category}
-            onChange={(e) => setForm({ ...form, category: e.target.value })}
+            onChange={(e) => setForm({ ...form, category: e.target.value as ProductCategory })}
             className="input-field"
           >
             {CATEGORY_OPTIONS.map((c) => (

@@ -4,13 +4,14 @@ import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import Layout from '../../components/Layout';
 import { AnimatedSection } from '../../components/AnimatedSection';
-import { getActivities, Activity, getKnowledgeList, Knowledge } from '../../lib/dataService';
+import { getActivities, type Activity, getKnowledgeList, type Knowledge } from '../../lib/dataService';
+import { ActivityStatus, KnowledgeStatus } from '../../prisma/generated/enums';
 import { formatActivityDate } from '../../lib/dateUtils';
 
 export const getStaticProps: GetStaticProps = async () => {
   try {
     const activities = await getActivities();
-    const articles = await getKnowledgeList({ status: 'confirmed' });
+    const articles = await getKnowledgeList({ status: KnowledgeStatus.CONFIRMED });
     return {
       props: { activities, articles },
       revalidate: 10,
@@ -27,13 +28,14 @@ const TYPES = ['All', 'Workshop', 'Challenge', 'Masterclass', 'Panel'];
 const ITEMS_PER_PAGE = 6;
 
 function typeColor(type: string) {
+  const t = (type || '').toUpperCase();
   const map: Record<string, string> = {
-    Workshop: 'bg-purple-100 text-purple-700',
-    Challenge: 'bg-pink-100 text-pink-600',
-    Masterclass: 'bg-emerald-100 text-emerald-700',
-    Panel: 'bg-blue-100 text-blue-700',
+    WORKSHOP: 'bg-purple-100 text-purple-700',
+    CHALLENGE: 'bg-pink-100 text-pink-600',
+    MASTERCLASS: 'bg-emerald-100 text-emerald-700',
+    PANEL: 'bg-blue-100 text-blue-700',
   };
-  return map[type] || 'bg-gray-100 text-gray-700';
+  return map[t] || 'bg-gray-100 text-gray-700';
 }
 
 function ArrowIcon({ className = '' }: { className?: string }) {
@@ -62,7 +64,7 @@ export default function CommonKnowledge({ activities = [], articles = [] }: Comm
 
   const filtered = useMemo(() => {
     return activities.filter((act) => {
-      const matchType = selectedType === 'All' || act.type === selectedType;
+      const matchType = selectedType === 'All' || (act.type || '').toUpperCase() === selectedType.toUpperCase();
       const matchSearch =
         !search ||
         act.title.toLowerCase().includes(search.toLowerCase()) ||
@@ -319,7 +321,7 @@ export default function CommonKnowledge({ activities = [], articles = [] }: Comm
                             {activity.type}
                           </span>
                         </span>
-                        {activity.status === 'full' && (
+                        {activity.status === ActivityStatus.FULL && (
                           <span className="absolute top-3 right-3">
                             <span className="badge bg-red-500 text-white shadow-sm">
                               Full

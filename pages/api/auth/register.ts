@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import prisma from '../../../lib/prisma';
 import { hashPassword } from '../../../lib/passwords';
+import { Role } from '../../../prisma/generated/enums';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -38,7 +39,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       data: {
         name: String(name).trim(),
         email: normalizedEmail,
-        role: 'user',
+        role: Role.USER,
         passwordHash,
         tagline: 'MechGirl Community Member',
       },

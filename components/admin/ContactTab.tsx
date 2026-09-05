@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ContactInfo } from '../../lib/dataService';
+import type { ContactInfo } from '../../lib/dataService';
 import { getAuthHeaders } from '../../lib/clientAuth';
 
 export default function ContactTab() {

@@ -1,12 +1,21 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Product } from '../../lib/dataService';
+import type { Product } from '../../lib/dataService';
 import { getAuthHeaders } from '../../lib/clientAuth';
+import { ProductCategory } from '../../prisma/generated/enums';
+
+const CATEGORY_FILTERS: (ProductCategory | 'All')[] = [
+  'All',
+  ProductCategory.ROBOTICS,
+  ProductCategory.IOT,
+  ProductCategory.MECHATRONICS,
+  ProductCategory.KNOWLEDGE,
+];
 
 export default function ProductsTab() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(false);
-  const [category, setCategory] = useState('All');
+  const [category, setCategory] = useState<ProductCategory | 'All'>('All');
   const [search, setSearch] = useState('');
 
   const fetchProducts = async () => {
@@ -46,7 +55,7 @@ export default function ProductsTab() {
   };
 
   const filtered = products.filter((prod) => {
-    const matchCat = category === 'All' || prod.category.toLowerCase() === category.toLowerCase();
+    const matchCat = category === 'All' || prod.category === category;
     const matchSearch =
       !search ||
       prod.title.toLowerCase().includes(search.toLowerCase()) ||
@@ -77,7 +86,7 @@ export default function ProductsTab() {
       {/* Filter and Search */}
       <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-soft flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-1.5 flex-wrap">
-          {['All', 'Robotics', 'IoT', 'Mechatronics', 'Software'].map((cat) => (
+          {CATEGORY_FILTERS.map((cat) => (
             <button
               key={cat}
               onClick={() => setCategory(cat)}

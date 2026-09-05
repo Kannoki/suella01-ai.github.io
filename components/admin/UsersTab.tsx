@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { User, TimelineItem } from '../../lib/dataService';
+import type { User, TimelineItem } from '../../lib/dataService';
 import { getAuthHeaders, compressImageFile } from '../../lib/clientAuth';
+import { Role } from '../../prisma/generated/enums';
+
+const ROLE_OPTIONS: Role[] = [Role.USER, Role.AUTHOR, Role.ADMIN];
 
 export default function UsersTab() {
   const [users, setUsers] = useState<User[]>([]);
@@ -17,7 +20,7 @@ export default function UsersTab() {
   const [userForm, setUserForm] = useState<{
     name: string;
     email: string;
-    role: string;
+    role: Role;
     tagline: string;
     bio: string;
     image: string;
@@ -25,7 +28,7 @@ export default function UsersTab() {
   }>({
     name: '',
     email: '',
-    role: 'user',
+    role: Role.USER,
     tagline: '',
     bio: '',
     image: '',
@@ -65,7 +68,7 @@ export default function UsersTab() {
     setUserForm({
       name: '',
       email: '',
-      role: 'user',
+      role: Role.USER,
       tagline: '',
       bio: '',
       image: '',
@@ -87,7 +90,7 @@ export default function UsersTab() {
     setUserForm({
       name: u.name || '',
       email: u.email || '',
-      role: u.role || 'user',
+      role: u.role || Role.USER,
       tagline: u.tagline || '',
       bio: u.bio || '',
       image: u.image || '',
@@ -272,7 +275,7 @@ export default function UsersTab() {
       (u.tagline && u.tagline.toLowerCase().includes(q));
     const matchesRole =
       userRoleFilter === 'all' ||
-      (u.role || 'user').toLowerCase() === userRoleFilter.toLowerCase();
+      (u.role || Role.USER) === userRoleFilter;
     return matchesSearch && matchesRole;
   });
 
@@ -320,11 +323,11 @@ export default function UsersTab() {
         {/* Search, Role Filter, View Toggle */}
         <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 pt-2 border-t border-gray-100">
           <div className="flex flex-wrap items-center gap-1.5">
-            {['all', 'admin', 'author', 'user'].map((r) => {
+            {(['all', ...ROLE_OPTIONS] as const).map((r) => {
               const count =
                 r === 'all'
                   ? users.length
-                  : users.filter((u) => (u.role || 'user').toLowerCase() === r).length;
+                  : users.filter((u) => (u.role || Role.USER) === r).length;
               return (
                 <button
                   key={r}
@@ -448,14 +451,14 @@ export default function UsersTab() {
                     <td className="py-3.5 px-4">
                       <span
                         className={`text-[10px] font-semibold uppercase tracking-wider px-2.5 py-1 rounded-full ${
-                          u.role === 'admin'
+                          u.role === Role.ADMIN
                             ? 'bg-purple-100 text-purple-800 border border-purple-200'
-                            : u.role === 'author'
+                            : u.role === Role.AUTHOR
                             ? 'bg-blue-100 text-blue-800 border border-blue-200'
                             : 'bg-gray-100 text-gray-700 border border-gray-200'
                         }`}
                       >
-                        {u.role || 'user'}
+                        {u.role || Role.USER}
                       </span>
                     </td>
                     <td className="py-3.5 px-4 text-gray-500 max-w-xs truncate">{u.tagline || '—'}</td>
@@ -514,14 +517,14 @@ export default function UsersTab() {
                   </div>
                   <span
                     className={`text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full ${
-                      u.role === 'admin'
+                      u.role === Role.ADMIN
                         ? 'bg-purple-100 text-purple-800'
-                        : u.role === 'author'
+                        : u.role === Role.AUTHOR
                         ? 'bg-blue-100 text-blue-800'
                         : 'bg-gray-100 text-gray-700'
                     }`}
                   >
-                    {u.role || 'user'}
+                    {u.role || Role.USER}
                   </span>
                 </div>
 
@@ -692,12 +695,12 @@ export default function UsersTab() {
                   </label>
                   <select
                     value={userForm.role}
-                    onChange={(e) => setUserForm((prev) => ({ ...prev, role: e.target.value }))}
+                    onChange={(e) => setUserForm((prev) => ({ ...prev, role: e.target.value as Role }))}
                     className="input-field text-xs"
                   >
-                    <option value="user">User (Standard)</option>
-                    <option value="author">Author (Contributor)</option>
-                    <option value="admin">Admin (Full Control)</option>
+                    <option value={Role.USER}>User (Standard)</option>
+                    <option value={Role.AUTHOR}>Author (Contributor)</option>
+                    <option value={Role.ADMIN}>Admin (Full Control)</option>
                   </select>
                 </div>
               </div>

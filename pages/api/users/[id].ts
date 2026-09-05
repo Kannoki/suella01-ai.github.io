@@ -3,10 +3,11 @@ import { getServerSession } from 'next-auth/next';
 import { getUserById, updateUser, deleteUser } from '../../../lib/dataService';
 import { checkAuth } from '../../../lib/auth';
 import { authOptions } from '../auth/[...nextauth]';
+import { Role } from '../../../prisma/generated/enums';
 
 /**
  * Returns true if the request is authenticated as an admin (either via API key
- * or a NextAuth session whose user has role === 'admin').
+ * or a NextAuth session whose user has role === Role.ADMIN).
  */
 async function isAdminRequest(req: NextApiRequest): Promise<boolean> {
   // First, fast path: API key / cookie via lib/auth.ts
@@ -16,7 +17,7 @@ async function isAdminRequest(req: NextApiRequest): Promise<boolean> {
   // Additionally check the role for role-gated updates (e.g. role/passwordHash changes)
   try {
     const session: any = await getServerSession(req, ({} as unknown) as any, authOptions);
-    if (session?.user?.role === 'admin') return true;
+    if (session?.user?.role === Role.ADMIN) return true;
   } catch {
     // ignore
   }

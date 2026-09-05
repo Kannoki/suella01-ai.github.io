@@ -10,13 +10,51 @@ datasource db {
   provider = "postgresql"
 }
 
-model Post {
-  id        String  @id @default(cuid())
-  title     String
-  content   String?
-  published Boolean @default(false)
-  author    User?   @relation(fields: [authorId], references: [id])
-  authorId  String?
+// ----------------------------------------------------
+// Enums — all @map'd to lowercase strings so existing JSON seeds
+// and runtime comparisons keep working without changes.
+// ----------------------------------------------------
+
+enum Role {
+  ADMIN  @map("admin")
+  AUTHOR @map("author")
+  USER   @map("user")
+}
+
+enum ActivityType {
+  WORKSHOP    @map("Workshop")
+  CHALLENGE   @map("Challenge")
+  MASTERCLASS @map("Masterclass")
+  PANEL       @map("Panel")
+}
+
+enum ActivityStatus {
+  OPEN   @map("open")
+  FULL   @map("full")
+  CLOSED @map("closed")
+}
+
+enum ProductCategory {
+  ROBOTICS     @map("Robotics")
+  KNOWLEDGE    @map("Knowledge")
+  IOT          @map("IoT")
+  MECHATRONICS @map("Mechatronics")
+}
+
+enum KnowledgeCategory {
+  ROBOTICS         @map("Robotics")
+  MECHANICS        @map("Mechanics")
+  ENGINEERING      @map("Engineering")
+  AI_And_Vision    @map("AI & Vision")
+  IoT_And_Hardware @map("IoT & Hardware")
+  PROGRAMMING      @map("Programming")
+  GENERAL          @map("General")
+}
+
+enum KnowledgeStatus {
+  PENDING   @map("pending")
+  CONFIRMED @map("confirmed")
+  REJECTED  @map("rejected")
 }
 
 model Account {
@@ -59,15 +97,15 @@ model User {
   image         String?   @db.Text // Base64 encoded profile image or URL
   tagline       String?
   bio           String?   @db.Text
-  role          String    @default("user") // "admin" | "author" | "user"
+  role          Role      @default(USER) // Role enum: admin | author | user
   passwordHash  String?   @map("password_hash") // bcrypt hash for credentials login
   timeline      Json      @default("[]") // Array of objects: [{ id, startYear, endYear, title, institution, description, order }]
   createdAt     DateTime  @default(now()) @map(name: "created_at")
   updatedAt     DateTime  @updatedAt @map(name: "updated_at")
-  posts         Post[]
   accounts      Account[]
   sessions      Session[]
 
+  @@index([createdAt])
   @@map(name: "users")
 }
 
@@ -88,7 +126,7 @@ model Activity {
   id            String         @id @default(cuid())
   title         String
   slug          String         @unique
-  type          String         @default("Workshop") // Workshop, Challenge, Masterclass, Panel
+  type          ActivityType   @default(WORKSHOP) // Workshop, Challenge, Masterclass, Panel
   date          String
   time          String?
   location      String?
@@ -97,12 +135,17 @@ model Activity {
   image         String?
   seats         Int            @default(0)
   registered    Int            @default(0)
-  status        String         @default("open") // open, full, closed
+  status        ActivityStatus @default(OPEN) // open, full, closed
   featured      Boolean        @default(false)
+  tags          String[]       @default([]) // free-form tags, mirrors Product.tags / Knowledge.tags
   createdAt     DateTime       @default(now()) @map("created_at")
   updatedAt     DateTime       @updatedAt @map("updated_at")
   registrations Registration[]
 
+  @@index([status])
+  @@index([featured])
+  @@index([createdAt])
+  @@index([status, createdAt])
   @@map("activities")
 }
 
@@ -116,25 +159,32 @@ model Registration {
   activityId String   @map("activity_id")
   activity   Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
   createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
 
+  @@index([activityId])
+  @@index([email])
+  @@index([createdAt])
   @@map("registrations")
 }
 
 model Product {
-  id          String   @id @default(cuid())
+  id          String          @id @default(cuid())
   title       String
-  slug        String   @unique
-  category    String   @default("Robotics") // Robotics, Knowledge, IoT, Mechatronics
+  slug        String          @unique
+  category    ProductCategory @default(ROBOTICS) // Robotics, Knowledge, IoT, Mechatronics
   description String
-  content     String?  @db.Text
+  content     String?         @db.Text
   image       String?
   github      String?
   demo        String?
-  tags        String[] @default([])
-  featured    Boolean  @default(false)
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  tags        String[]        @default([])
+  featured    Boolean         @default(false)
+  createdAt   DateTime        @default(now()) @map("created_at")
+  updatedAt   DateTime        @updatedAt @map("updated_at")
 
+  @@index([category])
+  @@index([featured])
+  @@index([createdAt])
   @@map("products")
 }
 
@@ -149,6 +199,7 @@ model CarouselSlide {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
+  @@index([active, order])
   @@map("carousel_slides")
 }
 
@@ -179,28 +230,33 @@ model ContactMessage {
   message   String   @db.Text
   read      Boolean  @default(false)
   createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
+  @@index([read])
+  @@index([createdAt])
   @@map("contact_messages")
 }
 
 model Knowledge {
-  id          String   @id @default(cuid())
+  id          String            @id @default(cuid())
   title       String
-  slug        String   @unique
-  category    String   @default("Engineering") // Robotics, Mechanics, AI, IoT, Engineering
-  summary     String?  @db.Text
-  content     String   @db.Text
-  image       String?  @db.Text
-  status      String   @default("pending") // "pending" | "confirmed" | "rejected"
-  confirmed   Boolean  @default(false)
-  authorId    String?  @map("author_id")
-  authorName  String?  @map("author_name")
-  authorEmail String?  @map("author_email")
-  authorImage String?  @map("author_image")
-  tags        String[] @default([])
-  views       Int      @default(0)
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  slug        String            @unique
+  category    KnowledgeCategory @default(ENGINEERING) // Robotics, Mechanics, Engineering, AI & Vision, IoT & Hardware, Programming, General
+  summary     String?           @db.Text
+  content     String            @db.Text
+  image       String?           @db.Text
+  status      KnowledgeStatus   @default(PENDING) // pending | confirmed | rejected
+  confirmed   Boolean           @default(false)
+  authorId    String?           @map("author_id")
+  authorName  String?           @map("author_name")
+  authorEmail String?           @map("author_email")
+  authorImage String?           @map("author_image")
+  tags        String[]          @default([])
+  createdAt   DateTime          @default(now()) @map("created_at")
+  updatedAt   DateTime          @updatedAt @map("updated_at")
 
+  @@index([status, createdAt])
+  @@index([authorId])
+  @@index([confirmed])
   @@map("common_knowledge")
 }

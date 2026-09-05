@@ -4,13 +4,25 @@ import Link from 'next/link';
 import type { Activity } from '../../lib/dataService';
 import { toDateInputValue, formatActivityDate } from '../../lib/dateUtils';
 import { getAuthHeaders, compressImageFile } from '../../lib/clientAuth';
+import { ActivityType, ActivityStatus } from '../../prisma/generated/enums';
 
 interface ActivityFormProps {
   initialData?: Activity | null;
   isNew?: boolean;
 }
 
-const TYPE_OPTIONS = ['Workshop', 'Challenge', 'Masterclass', 'Panel'];
+const TYPE_OPTIONS: ActivityType[] = [
+  ActivityType.WORKSHOP,
+  ActivityType.CHALLENGE,
+  ActivityType.MASTERCLASS,
+  ActivityType.PANEL,
+];
+
+const STATUS_OPTIONS: ActivityStatus[] = [
+  ActivityStatus.OPEN,
+  ActivityStatus.FULL,
+  ActivityStatus.CLOSED,
+];
 
 function parseInitialTime(timeStr?: string | null) {
   if (!timeStr) return { startTime: '', endTime: '', isAllDay: false, isCustom: false, customText: '' };
@@ -45,12 +57,12 @@ export default function ActivityForm({ initialData, isNew = false }: ActivityFor
 
   const [form, setForm] = useState({
     title: initialData?.title || '',
-    type: initialData?.type || 'Workshop',
+    type: initialData?.type || ActivityType.WORKSHOP,
     date: toDateInputValue(initialData?.date),
     time: initialData?.time || '',
     location: initialData?.location || '',
     seats: initialData?.seats ?? 30,
-    status: initialData?.status || 'open',
+    status: initialData?.status || ActivityStatus.OPEN,
     featured: Boolean(initialData?.featured),
     image: initialData?.image || '',
     description: initialData?.description || '',
@@ -69,12 +81,12 @@ export default function ActivityForm({ initialData, isNew = false }: ActivityFor
 
       setForm({
         title: initialData.title || '',
-        type: initialData.type || 'Workshop',
+        type: initialData.type || ActivityType.WORKSHOP,
         date: toDateInputValue(initialData.date),
         time: initialData.time || '',
         location: initialData.location || '',
         seats: initialData.seats ?? 30,
-        status: initialData.status || 'open',
+        status: initialData.status || ActivityStatus.OPEN,
         featured: Boolean(initialData.featured),
         image: initialData.image || '',
         description: initialData.description || '',
@@ -245,7 +257,7 @@ export default function ActivityForm({ initialData, isNew = false }: ActivityFor
           </label>
           <select
             value={form.type}
-            onChange={(e) => setForm({ ...form, type: e.target.value })}
+            onChange={(e) => setForm({ ...form, type: e.target.value as ActivityType })}
             className="input-field"
           >
             {TYPE_OPTIONS.map((t) => (
@@ -399,12 +411,12 @@ export default function ActivityForm({ initialData, isNew = false }: ActivityFor
           </label>
           <select
             value={form.status}
-            onChange={(e) => setForm({ ...form, status: e.target.value })}
+            onChange={(e) => setForm({ ...form, status: e.target.value as ActivityStatus })}
             className="input-field"
           >
-            <option value="open">Open (Accepting Registrations)</option>
-            <option value="full">Full (Capacity Reached)</option>
-            <option value="closed">Closed</option>
+            <option value={ActivityStatus.OPEN}>Open (Accepting Registrations)</option>
+            <option value={ActivityStatus.FULL}>Full (Capacity Reached)</option>
+            <option value={ActivityStatus.CLOSED}>Closed</option>
           </select>
         </div>
       </div>

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Registration } from '../../lib/dataService';
+import type { Registration } from '../../lib/dataService';
 import { getAuthHeaders } from '../../lib/clientAuth';
 
 interface RegistrationsTabProps {

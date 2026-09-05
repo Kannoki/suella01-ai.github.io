@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import Layout from '../../components/Layout';
 import { getLoggedInUser, logoutUser } from '../../lib/clientAuth';
+import { Role } from '../../prisma/generated/enums';
 
 // Modular Tab Components
 import ActivitiesTab from '../../components/admin/ActivitiesTab';
@@ -40,7 +41,7 @@ export default function AdminDashboard() {
     if (user) {
       setCurrentUser(user);
       // Default to Activities if Admin, or Registrations if regular user
-      if (user.role === 'admin') {
+      if (user.role === Role.ADMIN) {
         setActiveTab('Activities');
       } else {
         setActiveTab('Registrations');
@@ -51,7 +52,7 @@ export default function AdminDashboard() {
     }
   }, [router]);
 
-  const isAdmin = currentUser?.role === 'admin';
+  const isAdmin = currentUser?.role === Role.ADMIN;
   const availableTabs = isAdmin ? ADMIN_TABS : USER_TABS;
 
   // Ensure user cannot stay on an admin-only tab if logged in as regular user
@@ -129,7 +130,7 @@ export default function AdminDashboard() {
                       : 'bg-blue-100 text-blue-800'
                   }`}
                 >
-                  {currentUser?.role || 'user'}
+                  {currentUser?.role || Role.USER}
                 </span>
               </div>
               <p className="text-[11px] text-gray-400">

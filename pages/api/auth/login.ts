@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { getUserByEmail } from '../../../lib/dataService';
 import { verifyPassword, hashPassword } from '../../../lib/passwords';
 import prisma from '../../../lib/prisma';
+import { Role } from '../../../prisma/generated/enums';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -32,7 +33,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             data: {
               name: 'Administrator',
               email: String(email).toLowerCase().trim(),
-              role: 'admin',
+              role: Role.ADMIN,
               passwordHash,
               tagline: 'Site Administrator',
             },
@@ -67,7 +68,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         id: user.id,
         name: user.name,
         email: user.email,
-        role: user.role || 'user',
+        role: user.role || Role.USER,
         tagline: user.tagline || '',
         image: user.image || null,
         bio: user.bio || '',

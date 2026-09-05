@@ -5,6 +5,7 @@ import GitHubProvider from 'next-auth/providers/github';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import prisma from '../../../lib/prisma';
 import { verifyPassword } from '../../../lib/passwords';
+import { Role } from '../../../prisma/generated/enums';
 
 // Ensure a secret is configured at boot — fail fast rather than silently accepting misconfigured deployments.
 const authSecret = process.env.NEXTAUTH_SECRET || process.env.SECRET;
@@ -76,9 +77,9 @@ export const authOptions: NextAuthOptions = {
             where: { id: token.id as string },
             select: { role: true },
           });
-          (session.user as any).role = dbUser?.role || 'user';
+          (session.user as any).role = dbUser?.role || Role.USER;
         } catch {
-          (session.user as any).role = 'user';
+          (session.user as any).role = Role.USER;
         }
       }
       return session;

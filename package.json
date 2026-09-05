@@ -14,7 +14,9 @@
   "author": "",
   "type": "module",
   "scripts": {
+    "predev": "node scripts/dev-prep.js",
     "dev": "next",
+    "prebuild": "node scripts/dev-prep.js --build",
     "build": "prisma generate && next build",
     "start": "next start",
     "db:up": "docker compose up -d",
@@ -49,8 +51,10 @@
   "devDependencies": {
     "@types/next-auth": "3.15.0",
     "@types/node": "16.18.126",
+    "@types/pg": "^8.23.1",
     "@types/react": "17.0.93",
     "dotenv": "^17.2.3",
+    "pg": "^8.23.0",
     "prisma": "7.10.0",
     "string-replace-loader": "^3.2.0",
     "tsx": "^4.20.6",

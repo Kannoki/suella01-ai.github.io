@@ -27,7 +27,6 @@ export const swaggerSpec = {
     { name: 'Contact', description: 'Contact details, social media links, and user inquiries' },
     { name: 'Products', description: 'Engineering projects, hardware showcases, and robotics' },
     { name: 'Registrations', description: 'Participant event registrations' },
-    { name: 'Posts', description: 'Community feed, articles, and draft publication' },
     { name: 'Users', description: 'User accounts, roles, Base64 profile pictures, and career timelines' },
     { name: 'Auth', description: 'Authentication and session credentials management' },
   ],
@@ -780,110 +779,6 @@ export const swaggerSpec = {
         },
       },
     },
-    '/api/post': {
-      post: {
-        tags: ['Posts'],
-        summary: 'Create a new blog draft post',
-        description: 'Requires authentication.',
-        security: [{ bearerAuth: [] }, { apiKeyAuth: [] }],
-        requestBody: {
-          required: true,
-          content: {
-            'application/json': {
-              schema: { $ref: '#/components/schemas/CreatePostInput' },
-            },
-          },
-        },
-        responses: {
-          '201': {
-            description: 'Post created',
-            content: {
-              'application/json': {
-                schema: { $ref: '#/components/schemas/Post' },
-              },
-            },
-          },
-          '401': {
-            description: 'Unauthorized - Authentication required',
-            content: {
-              'application/json': {
-                schema: { $ref: '#/components/schemas/ErrorResponse' },
-              },
-            },
-          },
-        },
-      },
-    },
-    '/api/post/{id}': {
-      delete: {
-        tags: ['Posts'],
-        summary: 'Delete post by ID',
-        description: 'Requires authentication.',
-        security: [{ bearerAuth: [] }, { apiKeyAuth: [] }],
-        parameters: [
-          {
-            name: 'id',
-            in: 'path',
-            required: true,
-            description: 'Post ID',
-            schema: { type: 'string' },
-          },
-        ],
-        responses: {
-          '200': {
-            description: 'Post removed',
-            content: {
-              'application/json': {
-                schema: { $ref: '#/components/schemas/Post' },
-              },
-            },
-          },
-          '401': {
-            description: 'Unauthorized - Authentication required',
-            content: {
-              'application/json': {
-                schema: { $ref: '#/components/schemas/ErrorResponse' },
-              },
-            },
-          },
-        },
-      },
-    },
-    '/api/publish/{id}': {
-      put: {
-        tags: ['Posts'],
-        summary: 'Publish a draft post',
-        description: 'Sets published flag to true for the specified post ID. Requires authentication.',
-        security: [{ bearerAuth: [] }, { apiKeyAuth: [] }],
-        parameters: [
-          {
-            name: 'id',
-            in: 'path',
-            required: true,
-            description: 'Post ID',
-            schema: { type: 'string' },
-          },
-        ],
-        responses: {
-          '200': {
-            description: 'Post published',
-            content: {
-              'application/json': {
-                schema: { $ref: '#/components/schemas/Post' },
-              },
-            },
-          },
-          '401': {
-            description: 'Unauthorized - Authentication required',
-            content: {
-              'application/json': {
-                schema: { $ref: '#/components/schemas/ErrorResponse' },
-              },
-            },
-          },
-        },
-      },
-    },
     '/api/users': {
       get: {
         tags: ['Users'],
@@ -1090,7 +985,7 @@ export const swaggerSpec = {
           id: { type: 'string', example: 'user-1' },
           name: { type: 'string', example: 'MINH NGOC' },
           email: { type: 'string', nullable: true, example: 'admin@mechgirl.com' },
-          role: { type: 'string', example: 'admin' },
+          role: { type: 'string', enum: ['admin', 'author', 'user'], example: 'admin' },
           tagline: { type: 'string', nullable: true, example: 'Mechanical Engineering Student & STEM Advocate' },
           bio: { type: 'string', nullable: true, example: 'A passionate mechanical engineering student.' },
           image: {
@@ -1175,7 +1070,7 @@ export const swaggerSpec = {
           id: { type: 'string', example: 'act-1' },
           title: { type: 'string', example: 'Intro to CAD & 3D Printing' },
           slug: { type: 'string', example: 'intro-to-cad-3d-printing' },
-          type: { type: 'string', example: 'Workshop' },
+          type: { type: 'string', enum: ['Workshop', 'Challenge', 'Masterclass', 'Panel'], example: 'Workshop' },
           date: { type: 'string', example: '2026-10-15' },
           time: { type: 'string', nullable: true, example: '14:00 - 17:00' },
           location: { type: 'string', nullable: true, example: 'Makerspace Lab & Online' },
@@ -1184,8 +1079,9 @@ export const swaggerSpec = {
           image: { type: 'string', nullable: true, example: '/asset/activities/cad-workshop.jpg' },
           seats: { type: 'integer', example: 30 },
           registered: { type: 'integer', example: 12 },
-          status: { type: 'string', enum: ['open', 'full', 'past'], example: 'open' },
+          status: { type: 'string', enum: ['open', 'full', 'closed'], example: 'open' },
           featured: { type: 'boolean', example: true },
+          tags: { type: 'array', items: { type: 'string' } },
         },
       },
       CreateActivityInput: {
@@ -1194,7 +1090,7 @@ export const swaggerSpec = {
         properties: {
           title: { type: 'string', example: 'Robotics Bootcamp 2026' },
           slug: { type: 'string', example: 'robotics-bootcamp-2026' },
-          type: { type: 'string', example: 'Bootcamp' },
+          type: { type: 'string', enum: ['Workshop', 'Challenge', 'Masterclass', 'Panel'], example: 'Workshop' },
           date: { type: 'string', example: '2026-11-01' },
           time: { type: 'string', example: '09:00 - 16:00' },
           location: { type: 'string', example: 'Main Auditorium' },
@@ -1203,6 +1099,7 @@ export const swaggerSpec = {
           image: { type: 'string', example: '/asset/activities/robotics.jpg' },
           seats: { type: 'integer', example: 40 },
           featured: { type: 'boolean', example: true },
+          tags: { type: 'array', items: { type: 'string' } },
         },
       },
       UpdateActivityInput: {
@@ -1210,7 +1107,7 @@ export const swaggerSpec = {
         properties: {
           title: { type: 'string' },
           slug: { type: 'string' },
-          type: { type: 'string' },
+          type: { type: 'string', enum: ['Workshop', 'Challenge', 'Masterclass', 'Panel'] },
           date: { type: 'string' },
           time: { type: 'string' },
           location: { type: 'string' },
@@ -1218,8 +1115,9 @@ export const swaggerSpec = {
           content: { type: 'string' },
           image: { type: 'string' },
           seats: { type: 'integer' },
-          status: { type: 'string', enum: ['open', 'full', 'past'] },
+          status: { type: 'string', enum: ['open', 'full', 'closed'] },
           featured: { type: 'boolean' },
+          tags: { type: 'array', items: { type: 'string' } },
         },
       },
       ActivityRegistrationInput: {
@@ -1307,7 +1205,7 @@ export const swaggerSpec = {
           id: { type: 'string', example: 'prod-1' },
           title: { type: 'string', example: 'Automated 4-DOF Robotic Arm' },
           slug: { type: 'string', example: 'automated-4-dof-robotic-arm' },
-          category: { type: 'string', example: 'Robotics' },
+          category: { type: 'string', enum: ['Robotics', 'Knowledge', 'IoT', 'Mechatronics'], example: 'Robotics' },
           description: { type: 'string', example: 'Custom designed 3D printed robotic arm with Inverse Kinematics.' },
           content: { type: 'string', nullable: true, example: 'Detailed documentation and schematics.' },
           image: { type: 'string', nullable: true, example: '/asset/products/robotic-arm.jpg' },
@@ -1327,7 +1225,7 @@ export const swaggerSpec = {
         properties: {
           title: { type: 'string', example: 'IoT Environmental Sensor Pod' },
           slug: { type: 'string', example: 'iot-environmental-sensor-pod' },
-          category: { type: 'string', example: 'IoT' },
+          category: { type: 'string', enum: ['Robotics', 'Knowledge', 'IoT', 'Mechatronics'], example: 'IoT' },
           description: { type: 'string', example: 'Solar-powered ambient temperature & humidity monitor.' },
           content: { type: 'string', example: 'Circuit layout and ESP32 firmware.' },
           image: { type: 'string', example: '/asset/products/sensor-pod.jpg' },
@@ -1346,7 +1244,7 @@ export const swaggerSpec = {
         properties: {
           title: { type: 'string' },
           slug: { type: 'string' },
-          category: { type: 'string' },
+          category: { type: 'string', enum: ['Robotics', 'Knowledge', 'IoT', 'Mechatronics'] },
           description: { type: 'string' },
           content: { type: 'string' },
           image: { type: 'string' },
@@ -1368,25 +1266,6 @@ export const swaggerSpec = {
           activityId: { type: 'string', example: 'act-1' },
           activityTitle: { type: 'string', nullable: true, example: 'Intro to CAD & 3D Printing' },
           createdAt: { type: 'string', format: 'date-time', example: '2026-09-02T10:30:00Z' },
-        },
-      },
-      Post: {
-        type: 'object',
-        required: ['id', 'title', 'published'],
-        properties: {
-          id: { type: 'string', example: 'post-1' },
-          title: { type: 'string', example: 'My Journey into Robotics' },
-          content: { type: 'string', nullable: true, example: 'Reflecting on my first robotic arm build...' },
-          published: { type: 'boolean', example: true },
-          authorId: { type: 'string', nullable: true, example: 'user-1' },
-        },
-      },
-      CreatePostInput: {
-        type: 'object',
-        required: ['title'],
-        properties: {
-          title: { type: 'string', example: 'Designing Precision Gears' },
-          content: { type: 'string', example: 'Key lessons learned while 3D printing involute gears.' },
         },
       },
       SuccessResponse: {

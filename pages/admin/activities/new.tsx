@@ -3,6 +3,7 @@ import { useRouter } from 'next/router';
 import Layout from '../../../components/Layout';
 import ActivityForm from '../../../components/admin/ActivityForm';
 import { getLoggedInUser } from '../../../lib/clientAuth';
+import { Role } from '../../../prisma/generated/enums';
 
 export default function NewActivityPage() {
   const router = useRouter();
@@ -10,7 +11,7 @@ export default function NewActivityPage() {
 
   useEffect(() => {
     const user = getLoggedInUser();
-    if (!user || user.role !== 'admin') {
+    if (!user || user.role !== Role.ADMIN) {
       router.push('/login?callbackUrl=/admin/activities/new');
     } else {
       setAuthorized(true);

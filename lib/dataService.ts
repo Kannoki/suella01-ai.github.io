@@ -1,12 +1,56 @@
 import prisma from './prisma';
+import { Role, ActivityType, ActivityStatus, ProductCategory, KnowledgeCategory, KnowledgeStatus } from '../prisma/generated/enums';
+export { Role, ActivityType, ActivityStatus, ProductCategory, KnowledgeCategory, KnowledgeStatus };
 import fs from 'fs';
 import path from 'path';
+
+export function normalizeRole(r: any): Role {
+  if (!r) return Role.USER;
+  const s = String(r).toUpperCase();
+  if (s === 'ADMIN') return Role.ADMIN;
+  if (s === 'AUTHOR') return Role.AUTHOR;
+  return Role.USER;
+}
+
+export function normalizeActivityType(t: any): ActivityType {
+  if (!t) return ActivityType.WORKSHOP;
+  const s = String(t).toUpperCase();
+  if (s === 'CHALLENGE') return ActivityType.CHALLENGE;
+  if (s === 'MASTERCLASS') return ActivityType.MASTERCLASS;
+  if (s === 'PANEL') return ActivityType.PANEL;
+  return ActivityType.WORKSHOP;
+}
+
+export function normalizeActivityStatus(s: any): ActivityStatus {
+  if (!s) return ActivityStatus.OPEN;
+  const val = String(s).toUpperCase();
+  if (val === 'FULL') return ActivityStatus.FULL;
+  if (val === 'CLOSED') return ActivityStatus.CLOSED;
+  return ActivityStatus.OPEN;
+}
+
+export function normalizeProductCategory(c: any): ProductCategory {
+  if (!c) return ProductCategory.ROBOTICS;
+  const s = String(c).toUpperCase();
+  if (s === 'KNOWLEDGE') return ProductCategory.KNOWLEDGE;
+  if (s === 'IOT') return ProductCategory.IOT;
+  if (s === 'MECHATRONICS') return ProductCategory.MECHATRONICS;
+  return ProductCategory.ROBOTICS;
+}
+
+export function normalizeKnowledgeStatus(s: any): KnowledgeStatus {
+  if (!s) return KnowledgeStatus.PENDING;
+  const val = String(s).toUpperCase();
+  if (val === 'CONFIRMED') return KnowledgeStatus.CONFIRMED;
+  if (val === 'REJECTED') return KnowledgeStatus.REJECTED;
+  return KnowledgeStatus.PENDING;
+}
 
 export interface Activity {
   id: string;
   title: string;
   slug: string;
-  type: string;
+  type: ActivityType;
   date: string;
   time?: string | null;
   location?: string | null;
@@ -15,8 +59,9 @@ export interface Activity {
   image?: string | null;
   seats: number;
   registered: number;
-  status: string;
+  status: ActivityStatus;
   featured?: boolean;
+  tags: string[];
 }
 
 export interface Registration {
@@ -34,7 +79,7 @@ export interface Product {
   id: string;
   title: string;
   slug: string;
-  category: string;
+  category: ProductCategory;
   description: string;
   content?: string | null;
   image?: string | null;
@@ -80,7 +125,7 @@ export interface User {
   image?: string | null; // Base64 encoded or URL
   tagline?: string | null;
   bio?: string | null;
-  role?: string;
+  role?: Role;
   passwordHash?: string | null;
   timeline?: TimelineItem[];
   createdAt?: string | Date;
@@ -117,18 +162,17 @@ export interface Knowledge {
   id: string;
   title: string;
   slug: string;
-  category: string;
+  category: KnowledgeCategory;
   summary?: string | null;
   content: string;
   image?: string | null;
-  status: 'pending' | 'confirmed' | 'rejected';
+  status: KnowledgeStatus;
   confirmed: boolean;
   authorId?: string | null;
   authorName?: string | null;
   authorEmail?: string | null;
   authorImage?: string | null;
   tags?: string[];
-  views?: number;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -174,13 +218,29 @@ let inMemoryKnowledge: Knowledge[] = [];
 
 function initFallbackStores() {
   if (inMemoryUsers.length === 0) {
-    inMemoryUsers = loadJsonSeed<User[]>('users.json', []);
+    const rawUsers = loadJsonSeed<any[]>('users.json', []);
+    inMemoryUsers = rawUsers.map((u) => ({
+      ...u,
+      role: normalizeRole(u.role),
+      timeline: normalizeTimeline(u.timeline),
+    }));
   }
   if (inMemoryActivities.length === 0) {
-    inMemoryActivities = loadJsonSeed<Activity[]>('activities.json', []);
+    const rawActs = loadJsonSeed<any[]>('activities.json', []);
+    inMemoryActivities = rawActs.map((a) => ({
+      ...a,
+      type: normalizeActivityType(a.type),
+      status: normalizeActivityStatus(a.status),
+      tags: a.tags ?? [],
+    }));
   }
   if (inMemoryProducts.length === 0) {
-    inMemoryProducts = loadJsonSeed<Product[]>('products.json', []);
+    const rawProds = loadJsonSeed<any[]>('products.json', []);
+    inMemoryProducts = rawProds.map((p) => ({
+      ...p,
+      category: normalizeProductCategory(p.category),
+      tags: p.tags ?? [],
+    }));
   }
   if (inMemoryCarousel.length === 0) {
     inMemoryCarousel = loadJsonSeed<CarouselSlide[]>('carousel.json', []);
@@ -220,7 +280,12 @@ function initFallbackStores() {
     inMemoryRegistrations = loadJsonSeed<Registration[]>('registrations.json', []);
   }
   if (inMemoryKnowledge.length === 0) {
-    inMemoryKnowledge = loadJsonSeed<Knowledge[]>('knowledge.json', []);
+    const rawK = loadJsonSeed<any[]>('knowledge.json', []);
+    inMemoryKnowledge = rawK.map((k) => ({
+      ...k,
+      status: normalizeKnowledgeStatus(k.status),
+      tags: k.tags ?? [],
+    }));
   }
 }
 
@@ -239,7 +304,7 @@ export async function getActivities(): Promise<Activity[]> {
         id: r.id,
         title: r.title,
         slug: r.slug,
-        type: r.type,
+        type: r.type as ActivityType,
         date: r.date,
         time: r.time,
         location: r.location,
@@ -248,8 +313,9 @@ export async function getActivities(): Promise<Activity[]> {
         image: r.image,
         seats: r.seats,
         registered: r.registered,
-        status: r.status,
+        status: r.status as ActivityStatus,
         featured: r.featured,
+        tags: r.tags ?? [],
       }));
     }
   } catch (err) {
@@ -271,7 +337,7 @@ export async function getActivityBySlug(slug: string): Promise<Activity | null> 
         id: record.id,
         title: record.title,
         slug: record.slug,
-        type: record.type,
+        type: record.type as ActivityType,
         date: record.date,
         time: record.time,
         location: record.location,
@@ -280,8 +346,9 @@ export async function getActivityBySlug(slug: string): Promise<Activity | null> 
         image: record.image,
         seats: record.seats,
         registered: record.registered,
-        status: record.status,
+        status: record.status as ActivityStatus,
         featured: record.featured,
+        tags: record.tags ?? [],
       };
     }
   } catch (err) {
@@ -302,7 +369,7 @@ export async function createActivity(data: Partial<Activity>): Promise<Activity>
       data: {
         title,
         slug,
-        type: data.type || 'Workshop',
+        type: data.type || ActivityType.WORKSHOP,
         date: data.date || 'TBD',
         time: data.time || null,
         location: data.location || 'Online',
@@ -311,11 +378,28 @@ export async function createActivity(data: Partial<Activity>): Promise<Activity>
         image: data.image || null,
         seats,
         registered: 0,
-        status: seats > 0 ? 'open' : 'full',
+        status: seats > 0 ? ActivityStatus.OPEN : ActivityStatus.FULL,
         featured: Boolean(data.featured),
+        tags: data.tags || [],
       },
     });
-    return created;
+    return {
+      id: created.id,
+      title: created.title,
+      slug: created.slug,
+      type: created.type as ActivityType,
+      date: created.date,
+      time: created.time,
+      location: created.location,
+      description: created.description,
+      content: created.content,
+      image: created.image,
+      seats: created.seats,
+      registered: created.registered,
+      status: created.status as ActivityStatus,
+      featured: created.featured,
+      tags: created.tags ?? [],
+    };
   } catch (err) {
     // Fallback
   }
@@ -325,7 +409,7 @@ export async function createActivity(data: Partial<Activity>): Promise<Activity>
     id: `act-${Date.now()}`,
     title,
     slug,
-    type: data.type || 'Workshop',
+    type: data.type || ActivityType.WORKSHOP,
     date: data.date || 'TBD',
     time: data.time || '',
     location: data.location || 'Online',
@@ -334,8 +418,9 @@ export async function createActivity(data: Partial<Activity>): Promise<Activity>
     image: data.image || '',
     seats,
     registered: 0,
-    status: seats > 0 ? 'open' : 'full',
+    status: seats > 0 ? ActivityStatus.OPEN : ActivityStatus.FULL,
     featured: Boolean(data.featured),
+    tags: data.tags || [],
   };
   inMemoryActivities.unshift(newActivity);
   saveJsonSeed('activities.json', inMemoryActivities);
@@ -357,12 +442,12 @@ export async function updateActivity(id: string, updates: Partial<Activity>): Pr
     if (current) {
       const seats = updates.seats !== undefined ? Number(updates.seats) : current.seats;
       const registered = updates.registered !== undefined ? Number(updates.registered) : current.registered;
-      if (updates.status === 'closed') {
-        dataToUpdate.status = 'closed';
+      if (updates.status === ActivityStatus.CLOSED) {
+        dataToUpdate.status = ActivityStatus.CLOSED;
       } else if (seats > 0 && registered >= seats) {
-        dataToUpdate.status = 'full';
+        dataToUpdate.status = ActivityStatus.FULL;
       } else {
-        dataToUpdate.status = 'open';
+        dataToUpdate.status = ActivityStatus.OPEN;
       }
     }
   }
@@ -372,7 +457,23 @@ export async function updateActivity(id: string, updates: Partial<Activity>): Pr
       where: { id },
       data: dataToUpdate,
     });
-    return updated;
+    return {
+      id: updated.id,
+      title: updated.title,
+      slug: updated.slug,
+      type: updated.type as ActivityType,
+      date: updated.date,
+      time: updated.time,
+      location: updated.location,
+      description: updated.description,
+      content: updated.content,
+      image: updated.image,
+      seats: updated.seats,
+      registered: updated.registered,
+      status: updated.status as ActivityStatus,
+      featured: updated.featured,
+      tags: updated.tags ?? [],
+    };
   } catch (err) {
     // Fallback
   }
@@ -424,7 +525,7 @@ export async function registerForActivity(
       const updated = await prisma.activity.updateMany({
         where: {
           id: activity.id,
-          status: { not: 'closed' },
+          status: { not: ActivityStatus.CLOSED },
           // Conditional: registered must be strictly less than seats
           // (or seats must be 0 for unlimited, which we treat as no cap)
           OR: [
@@ -434,7 +535,7 @@ export async function registerForActivity(
         },
         data: {
           registered: { increment: 1 },
-          status: activity.seats > 0 && activity.registered + 1 >= activity.seats ? 'full' : 'open',
+          status: activity.seats > 0 && activity.registered + 1 >= activity.seats ? ActivityStatus.FULL : ActivityStatus.OPEN,
         },
       });
 
@@ -462,7 +563,7 @@ export async function registerForActivity(
   const act = inMemoryActivities.find((a) => a.id === activityIdOrSlug || a.slug === activityIdOrSlug);
   if (!act) return false;
   if (act.seats > 0 && act.registered >= act.seats) return false;
-  if (act.status === 'closed') return false;
+  if (act.status === ActivityStatus.CLOSED) return false;
 
   const newReg: Registration = {
     id: `reg-${Date.now()}`,
@@ -477,7 +578,7 @@ export async function registerForActivity(
   inMemoryRegistrations.push(newReg);
   act.registered += 1;
   if (act.registered >= act.seats) {
-    act.status = 'full';
+    act.status = ActivityStatus.FULL;
   }
   return true;
 }
@@ -494,7 +595,7 @@ export async function getProducts(): Promise<Product[]> {
         id: r.id,
         title: r.title,
         slug: r.slug,
-        category: r.category,
+        category: r.category as ProductCategory,
         description: r.description,
         content: r.content,
         image: r.image,
@@ -522,7 +623,7 @@ export async function getProductBySlug(slug: string): Promise<Product | null> {
         id: record.id,
         title: record.title,
         slug: record.slug,
-        category: record.category,
+        category: record.category as ProductCategory,
         description: record.description,
         content: record.content,
         image: record.image,
@@ -549,7 +650,7 @@ export async function createProduct(data: Partial<Product>): Promise<Product> {
       data: {
         title,
         slug,
-        category: data.category || 'Robotics',
+        category: data.category || ProductCategory.ROBOTICS,
         description: data.description || '',
         content: data.content || '',
         image: data.image || '',
@@ -559,7 +660,19 @@ export async function createProduct(data: Partial<Product>): Promise<Product> {
         featured: Boolean(data.featured),
       },
     });
-    return created;
+    return {
+      id: created.id,
+      title: created.title,
+      slug: created.slug,
+      category: created.category as ProductCategory,
+      description: created.description,
+      content: created.content,
+      image: created.image,
+      github: created.github,
+      demo: created.demo,
+      tags: created.tags,
+      featured: created.featured,
+    };
   } catch (err) {
     // Fallback
   }
@@ -569,7 +682,7 @@ export async function createProduct(data: Partial<Product>): Promise<Product> {
     id: `prod-${Date.now()}`,
     title,
     slug,
-    category: data.category || 'Robotics',
+    category: data.category || ProductCategory.ROBOTICS,
     description: data.description || '',
     content: data.content || '',
     image: data.image || '',
@@ -724,7 +837,7 @@ export async function getUsers(): Promise<User[]> {
         image: u.image,
         tagline: u.tagline,
         bio: u.bio,
-        role: u.role || 'user',
+        role: (u.role || Role.USER) as Role,
         passwordHash: u.passwordHash,
         timeline: normalizeTimeline(u.timeline),
         createdAt: u.createdAt,
@@ -765,7 +878,7 @@ export async function getUserById(id: string): Promise<User | null> {
         image: u.image,
         tagline: u.tagline,
         bio: u.bio,
-        role: u.role || 'user',
+        role: (u.role || Role.USER) as Role,
         passwordHash: u.passwordHash,
         timeline: normalizeTimeline(u.timeline),
         createdAt: u.createdAt,
@@ -793,7 +906,7 @@ export async function getUserByEmail(email: string): Promise<User | null> {
         image: u.image,
         tagline: u.tagline,
         bio: u.bio,
-        role: u.role || 'user',
+        role: (u.role || Role.USER) as Role,
         passwordHash: u.passwordHash,
         timeline: normalizeTimeline(u.timeline),
         createdAt: u.createdAt,
@@ -820,7 +933,7 @@ export async function createUser(data: Partial<User>): Promise<User> {
     image: data.image || null,
     tagline: data.tagline || null,
     bio: data.bio || null,
-    role: data.role || 'user',
+    role: data.role || Role.USER,
     passwordHash: data.passwordHash || null,
     timeline: timelineVal,
     createdAt: new Date().toISOString(),
@@ -838,7 +951,7 @@ export async function createUser(data: Partial<User>): Promise<User> {
         image: data.image || null,
         tagline: data.tagline || null,
         bio: data.bio || null,
-        role: data.role || 'user',
+        role: data.role || Role.USER,
         passwordHash: data.passwordHash || null,
         timeline: timelineVal as any,
       },
@@ -850,7 +963,7 @@ export async function createUser(data: Partial<User>): Promise<User> {
       image: created.image,
       tagline: created.tagline,
       bio: created.bio,
-      role: created.role,
+      role: created.role as Role,
       passwordHash: created.passwordHash,
       timeline: normalizeTimeline(created.timeline),
       createdAt: created.createdAt,
@@ -888,7 +1001,7 @@ export async function updateUser(id: string, data: Partial<User>): Promise<User>
       image: updated.image,
       tagline: updated.tagline,
       bio: updated.bio,
-      role: updated.role,
+      role: updated.role as Role,
       passwordHash: updated.passwordHash,
       timeline: normalizeTimeline(updated.timeline),
       createdAt: updated.createdAt,
@@ -942,12 +1055,12 @@ export async function deleteUser(id: string): Promise<boolean> {
 
 /**
  * Finds the canonical admin user for site-wide About profile data.
- * Strictly prefers role==='admin' (set in DB); never falls back to brittle string matching.
+ * Strictly prefers role === Role.ADMIN (set in DB); never falls back to brittle string matching.
  */
 async function findPrimaryAdminUser(): Promise<User | null> {
   const users = await getUsers();
   return (
-    users.find((u) => u.role === 'admin') ||
+    users.find((u) => u.role === Role.ADMIN) ||
     null
   );
 }
@@ -1006,7 +1119,7 @@ export async function updateAboutProfile(data: Partial<AboutProfile>): Promise<A
   const created = await createUser({
     name: data.name || 'MINH NGOC',
     email: 'admin@mechgirl.com',
-    role: 'admin',
+    role: Role.ADMIN,
     tagline: data.tagline || 'Mechanical Engineering Student & STEM Advocate',
     bio: data.bio || '',
     image: imageVal,
@@ -1212,8 +1325,8 @@ export async function deleteRegistration(id: string): Promise<boolean> {
 
     // Recompute status after decrement (separate read since the activity update above only decrements)
     const act = await prisma.activity.findUnique({ where: { id: reg.activityId } });
-    if (act && act.status !== 'closed') {
-      const newStatus = act.seats > 0 && act.registered >= act.seats ? 'full' : 'open';
+    if (act && act.status !== ActivityStatus.CLOSED) {
+      const newStatus = act.seats > 0 && act.registered >= act.seats ? ActivityStatus.FULL : ActivityStatus.OPEN;
       if (newStatus !== act.status) {
         await prisma.activity.update({ where: { id: reg.activityId }, data: { status: newStatus } });
       }
@@ -1233,8 +1346,8 @@ export async function deleteRegistration(id: string): Promise<boolean> {
     const act = inMemoryActivities.find((a) => a.id === regToDelete.activityId);
     if (act && act.registered > 0) {
       act.registered -= 1;
-      if (act.status !== 'closed' && act.registered < act.seats) {
-        act.status = 'open';
+      if (act.status !== ActivityStatus.CLOSED && act.registered < act.seats) {
+        act.status = ActivityStatus.OPEN;
       }
     }
   }
@@ -1244,13 +1357,13 @@ export async function deleteRegistration(id: string): Promise<boolean> {
 // ----------------- COMMON KNOWLEDGE (BLOGS & COMMUNITY ARTICLES) -----------------
 
 export async function getKnowledgeList(filter?: {
-  status?: string;
+  status?: KnowledgeStatus | 'all';
   authorEmail?: string;
   search?: string;
 }): Promise<Knowledge[]> {
   try {
     const whereClause: any = {};
-    if (filter?.status && filter.status !== 'all') {
+    if (filter?.status && (filter.status as any) !== 'all') {
       whereClause.status = filter.status;
       // Always require confirmed=true alongside an explicit status filter
       // so we don't surface unconfirmed rows even if status was set externally
@@ -1277,13 +1390,17 @@ export async function getKnowledgeList(filter?: {
   initFallbackStores();
   const seed = loadJsonSeed<Knowledge[]>('knowledge.json', inMemoryKnowledge);
   if (seed && Array.isArray(seed) && seed.length > 0) {
-    inMemoryKnowledge = seed;
+    inMemoryKnowledge = seed.map((k) => ({
+      ...k,
+      status: normalizeKnowledgeStatus(k.status),
+      tags: k.tags ?? [],
+    }));
   }
 
   let list = [...inMemoryKnowledge];
 
   // Both DB and JSON branches must require confirmed=true unless explicitly opting in
-  if (filter?.status && filter.status !== 'all') {
+  if (filter?.status && (filter.status as any) !== 'all') {
     list = list.filter((k) => k.status === filter.status && k.confirmed);
   } else {
     // No status filter — default to confirmed only for public listing
@@ -1353,14 +1470,14 @@ export async function createKnowledge(data: Partial<Knowledge>): Promise<Knowled
   const id = data.id || `know-${Date.now()}`;
   const title = data.title || 'Untitled Knowledge';
   const slug = data.slug || slugify(title) + '-' + Math.floor(Math.random() * 1000);
-  const status = (data.status as any) || 'pending';
-  const confirmed = data.confirmed ?? (status === 'confirmed');
+  const status = data.status || KnowledgeStatus.PENDING;
+  const confirmed = data.confirmed ?? (status === KnowledgeStatus.CONFIRMED);
 
   const newArticle: Knowledge = {
     id,
     title,
     slug,
-    category: data.category || 'Engineering',
+    category: data.category || KnowledgeCategory.ENGINEERING,
     summary: data.summary || '',
     content: data.content || '',
     image: data.image || null,
@@ -1371,7 +1488,6 @@ export async function createKnowledge(data: Partial<Knowledge>): Promise<Knowled
     authorEmail: data.authorEmail || null,
     authorImage: data.authorImage || null,
     tags: Array.isArray(data.tags) ? data.tags : [],
-    views: data.views || 0,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
@@ -1396,7 +1512,6 @@ export async function createKnowledge(data: Partial<Knowledge>): Promise<Knowled
         authorEmail: newArticle.authorEmail,
         authorImage: newArticle.authorImage,
         tags: newArticle.tags,
-        views: newArticle.views,
       },
     });
   } catch (err) {
@@ -1413,7 +1528,7 @@ export async function updateKnowledge(id: string, updates: Partial<Knowledge>): 
 
   const target = inMemoryKnowledge[idx];
   const newStatus = updates.status !== undefined ? updates.status : target.status;
-  const newConfirmed = updates.confirmed !== undefined ? updates.confirmed : (newStatus === 'confirmed');
+  const newConfirmed = updates.confirmed !== undefined ? updates.confirmed : (newStatus === KnowledgeStatus.CONFIRMED);
 
   const updated: Knowledge = {
     ...target,
@@ -1451,7 +1566,7 @@ export async function updateKnowledge(id: string, updates: Partial<Knowledge>): 
 export async function confirmKnowledge(id: string, confirmed: boolean): Promise<Knowledge | null> {
   return updateKnowledge(id, {
     confirmed,
-    status: confirmed ? 'confirmed' : 'rejected',
+    status: confirmed ? KnowledgeStatus.CONFIRMED : KnowledgeStatus.REJECTED,
   });
 }
 
