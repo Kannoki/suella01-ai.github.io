@@ -225,6 +225,14 @@ export default function LoginPage() {
       if (!res.ok) throw new Error(data.error || 'Registration failed');
 
       saveLoggedInUser(data.user, data.token);
+
+      // Sync NextAuth session (best-effort)
+      try {
+        await signIn('credentials', { email: signUpEmail, password: signUpPassword, redirect: false });
+      } catch (e) {
+        console.warn('NextAuth session sync warning:', e);
+      }
+
       setSignUpSuccess(true);
 
       // After 1.5 s, switch to sign-in view showing the new account

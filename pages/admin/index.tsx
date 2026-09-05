@@ -41,7 +41,7 @@ export default function AdminDashboard() {
     if (user) {
       setCurrentUser(user);
       // Default to Activities if Admin, or Registrations if regular user
-      if (user.role === Role.ADMIN) {
+      if (user.role === Role.ADMIN || String(user.role).toUpperCase() === 'ADMIN') {
         setActiveTab('Activities');
       } else {
         setActiveTab('Registrations');
@@ -52,7 +52,7 @@ export default function AdminDashboard() {
     }
   }, [router]);
 
-  const isAdmin = currentUser?.role === Role.ADMIN;
+  const isAdmin = currentUser?.role === Role.ADMIN || String(currentUser?.role).toUpperCase() === 'ADMIN';
   const availableTabs = isAdmin ? ADMIN_TABS : USER_TABS;
 
   // Ensure user cannot stay on an admin-only tab if logged in as regular user
