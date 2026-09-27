@@ -1,4 +1,11 @@
 node_modules/
 .next/
 .env
+.env.production
 /prisma/generated
+
+# TypeScript incremental build cache
+*.tsbuildinfo
+
+# Docker
+.dockerignore

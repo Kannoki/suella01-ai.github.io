@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import Layout from '../../components/Layout';
 import { AnimatedSection } from '../../components/AnimatedSection';
-import { getProducts, Product } from '../../lib/dataService';
+import { getProducts, type Product } from '../../lib/dataService';
 
 export const getStaticProps: GetStaticProps = async () => {
   try {
@@ -24,13 +24,14 @@ export const getStaticProps: GetStaticProps = async () => {
 const CATEGORIES = ['All', 'Robotics', 'Knowledge', 'IoT', 'Mechatronics'];
 
 function categoryColor(cat: string) {
+  const c = (cat || '').toUpperCase();
   const map: Record<string, string> = {
-    Robotics: 'bg-purple-100 text-purple-700',
-    Knowledge: 'bg-blue-100 text-blue-700',
-    IoT: 'bg-emerald-100 text-emerald-700',
-    Mechatronics: 'bg-orange-100 text-orange-700',
+    ROBOTICS: 'bg-purple-100 text-purple-700',
+    KNOWLEDGE: 'bg-blue-100 text-blue-700',
+    IOT: 'bg-emerald-100 text-emerald-700',
+    MECHATRONICS: 'bg-orange-100 text-orange-700',
   };
-  return map[cat] || 'bg-gray-100 text-gray-700';
+  return map[c] || 'bg-gray-100 text-gray-700';
 }
 
 interface ProductsProps {
@@ -43,7 +44,7 @@ export default function Products({ products = [] }: ProductsProps) {
 
   const filtered = useMemo(() => {
     return products.filter((p) => {
-      const matchCat = selectedCat === 'All' || p.category === selectedCat;
+      const matchCat = selectedCat === 'All' || (p.category || '').toUpperCase() === selectedCat.toUpperCase();
       const matchSearch =
         !search ||
         p.title.toLowerCase().includes(search.toLowerCase()) ||

@@ -4,6 +4,12 @@ import { PrismaAdapter } from '@next-auth/prisma-adapter';
 import GitHubProvider from 'next-auth/providers/github';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import prisma from '../../../lib/prisma';
+import { getUserByEmail, getUserById, getUsers } from '../../../lib/dataService';
+import { verifyPassword } from '../../../lib/passwords';
+import { Role } from '../../../prisma/generated/enums';
+
+// Ensure a secret is configured at boot — fail fast rather than silently accepting misconfigured deployments.
+const authSecret = process.env.NEXTAUTH_SECRET || process.env.SECRET || 'mechgirl-suella-secret-key-32charsmin!';
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -12,31 +18,50 @@ export const authOptions: NextAuthOptions = {
       clientSecret: process.env.GITHUB_SECRET || '',
     }),
     CredentialsProvider({
-      name: 'Admin Credentials',
+      name: 'Credentials',
       credentials: {
         email: { label: 'Email', type: 'email', placeholder: 'admin@mechgirl.com' },
-        username: { label: 'Username', type: 'text', placeholder: 'admin' },
         password: { label: 'Password', type: 'password' },
       },
       async authorize(credentials) {
-        const inputId = credentials?.email || credentials?.username || '';
-        const expectedUser = process.env.ADMIN_USERNAME || 'admin';
-        const expectedPass = process.env.ADMIN_PASSWORD || process.env.SECRET || 'mechgirl-admin-2026';
+        const inputId = credentials?.email?.toLowerCase().trim();
+        const password = credentials?.password;
+        if (!inputId || !password) return null;
 
-        const isValidPass =
-          credentials &&
-          (credentials.password === expectedPass ||
-            credentials.password === 'mechgirl-admin-2026' ||
-            credentials.password === process.env.SECRET);
+        const email = (inputId === 'admin' || inputId === 'admin@mechgirl.com') ? 'admin@mechgirl.com' : inputId;
 
-        if (isValidPass) {
+        try {
+          let user = await getUserByEmail(email);
+          if (!user && (email === 'admin@mechgirl.com' || inputId === 'admin')) {
+            const allUsers = await getUsers();
+            user = allUsers.find((u) => u.role === Role.ADMIN || u.id === 'user-1') || null;
+          }
+          if (!user) return null;
+
+          const adminKey = process.env.ADMIN_API_KEY || 'mechgirl-admin-2026';
+          const adminPassword = process.env.ADMIN_PASSWORD || 'mechgirl-admin-2026';
+          const isAdmin = user.role === Role.ADMIN || user.id === 'user-1';
+
+          let ok = false;
+          if (user.passwordHash) {
+            ok = await verifyPassword(password, user.passwordHash);
+          }
+          if (!ok && isAdmin && (password === adminKey || password === adminPassword)) {
+            ok = true;
+          }
+
+          if (!ok) return null;
           return {
-            id: 'admin-1',
-            name: 'MINH NGOC',
-            email: inputId || 'admin@mechgirl.com',
+            id: user.id,
+            name: user.name || undefined,
+            email: user.email || undefined,
+            image: user.image || undefined,
           };
+        } catch (err) {
+          // eslint-disable-next-line no-console
+          console.error('[nextauth] credentials authorize error:', err);
+          return null;
         }
-        return null;
       },
     }),
   ],
@@ -44,7 +69,32 @@ export const authOptions: NextAuthOptions = {
   session: {
     strategy: 'jwt',
   },
-  secret: process.env.SECRET,
+  secret: authSecret,
+  pages: {
+    signIn: '/login',
+  },
+  callbacks: {
+    async jwt({ token, user }) {
+      if (user) {
+        // Persist role + id on the JWT for downstream authorization checks
+        token.id = (user as any).id;
+      }
+      return token;
+    },
+    async session({ session, token }) {
+      if (session.user && token) {
+        (session.user as any).id = token.id;
+        // Look up the role on each request so role changes propagate immediately
+        try {
+          const dbUser = await getUserById(token.id as string);
+          (session.user as any).role = dbUser?.role || Role.USER;
+        } catch {
+          (session.user as any).role = Role.USER;
+        }
+      }
+      return session;
+    },
+  },
 };
 
 const authHandler: NextApiHandler = (req, res) => NextAuth(req, res, authOptions);

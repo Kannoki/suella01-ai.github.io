@@ -1,291 +1,124 @@
-# Fullstack Authentication Example with Next.js and NextAuth.js
+# MechGirl STEM Portal
 
-With Railway Integration
+Empowering Women in Mechanics, Robotics & STEM. A Next.js 13 fullstack portal for
+managing activities, products, knowledge articles, and community engagement.
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fprisma%2Ffullstack-prisma-nextjs-blog&env=SECRET,GITHUB_ID,GITHUB_SECRET&project-name=fullstack-prisma-nextjs-blog&repo-name=fullstack-prisma-nextjs-blog&integration-ids=oac_eGEyJUf8jDjOQSCNJiyYRbfX)
+## Stack
 
-Without the Railway integration
+- **Frontend:** React 18 + Next.js 13 (Pages Router) + TypeScript + Tailwind CSS + Framer Motion
+- **Backend:** Next.js API routes (Node 20)
+- **Auth:** NextAuth.js (Credentials + GitHub OAuth) with bcrypt password hashing
+- **Database:** PostgreSQL via Prisma 7 + `@prisma/adapter-pg`
+- **API docs:** Hand-maintained OpenAPI spec rendered with Swagger UI (`/docs`)
+- **Deployment:** Docker + Docker Compose + Nginx reverse proxy
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fprisma%2Ffullstack-prisma-nextjs-blog&env=DATABASE_URL,SECRET,GITHUB_ID,GITHUB_SECRET&project-name=fullstack-prisma-nextjs-blog&repo-name=fullstack-prisma-nextjs-blog)
+## Quick start
 
-This is a starter that shows how to implement a **fullstack app in TypeScript with [Next.js](https://nextjs.org/)** with the following stack:
+### 1. Install dependencies
 
-- [React](https://reactjs.org/) (frontend)
-- [Next.js API routes](https://nextjs.org/docs/api-routes/introduction)
-- [Prisma Client](https://www.prisma.io/docs/reference/tools-and-interfaces/prisma-client) (backend).
-- [NextAuth.js](https://next-auth.js.org/) for authentication. 
-- [PostgreSQL](http://postgresql.org/) as the database of choice.
-
-Before you deploy the application to Vercel, ensure you
-- (Optional) Sign in to Railway and create a PostgreSQL database
-- Create a separate GitHub OAuth application before you deploy your application
-- Update the **Authorization callback URL** with the URL of the deployed app after successfully deploying the app
-
-Note that the app uses a mix of server-side rendering with `getServerSideProps` (SSR) and static site generation with `getStaticProps` (SSG). When possible, SSG is used to make database queries already at build-time (e.g. when fetching the [public feed](./pages/index.tsx)). Sometimes, the user requesting data needs to be authenticated, so SSR is being used to render data dynamically on the server-side (e.g. when viewing a user's [drafts](./pages/drafts.tsx)).
-
-## Getting started
-
-### 1. Download and install dependencies
-
-Clone this repository:
-
-```
-git clone git@github.com:prisma/prisma-nextjs-blog.git
-```
-
-Install npm dependencies:
-
-```
-cd prisma-nextjs-blog
+```bash
 npm install
 ```
 
-</details>
+### 2. Configure environment variables
 
-### 2. Create and seed the database
+Copy `.env.example` to `.env` and fill in real values:
 
-If you're using Docker on your computer, the following script to set up PostgreSQL database using the `docker-compose.yml` file at the root of your project:
-
-```
-npm run db:up
+```bash
+cp .env.example .env
 ```
 
-Run the following command to create your PostgreSQL database. This also creates the `User`, `Post`, `Account`, `Session` and `VerificationToken` tables that are defined in [`prisma/schema.prisma`](./prisma/schema.prisma):
+The only **required** values are:
 
-```
-npx prisma migrate dev --name init
-```
+- `DATABASE_URL` — PostgreSQL connection string
+- `NEXTAUTH_SECRET` — 32+ char random secret for JWT signing
+- `ADMIN_BOOTSTRAP_PASSWORD` — used **once** to create the first admin account
 
-When `npx prisma migrate dev` is executed against a newly created database, seeding is also triggered. The seed file in [`prisma/seed.ts`](./prisma/seed.ts) will be executed and your database will be populated with the sample data.
+Generate secrets with `openssl rand -base64 32`.
 
+### 3. Start the database and run migrations
 
-### 3. Configuring your authentication provider
-
-In order to get this example to work, you need to configure the [GitHub](https://next-auth.js.org/providers/github) authentication provider from NextAuth.js.
-
-#### Configuring the GitHub authentication provider
-
-<details><summary>Expand to learn how you can configure the GitHub authentication provider</summary>
-
-First, log into your [GitHub](https://github.com/) account.
-
-Then, navigate to [**Settings**](https://github.com/settings/profile), then open to [**Developer Settings**](https://github.com/settings/apps), then switch to [**OAuth Apps**](https://github.com/settings/developers).
-
-![](https://res.cloudinary.com/practicaldev/image/fetch/s--fBiGBXbE--/c_limit%2Cf_auto%2Cfl_progressive%2Cq_auto%2Cw_880/https://i.imgur.com/4eQrMAs.png)
-
-Clicking on the **Register a new application** button will redirect you to a registration form to fill out some information for your app. The **Authorization callback URL** should be the Next.js `/api/auth` route.
-
-An important thing to note here is that the **Authorization callback URL** field only supports a single URL, unlike e.g. Auth0, which allows you to add additional callback URLs separated with a comma. This means if you want to deploy your app later with a production URL, you will need to set up a new GitHub OAuth app.
-
-![](https://res.cloudinary.com/practicaldev/image/fetch/s--v7s0OEs_--/c_limit%2Cf_auto%2Cfl_progressive%2Cq_auto%2Cw_880/https://i.imgur.com/tYtq5fd.png)
-
-Click on the **Register application** button, and then you will be able to find your newly generated **Client ID** and **Client Secret**. Copy and paste this info into the [`.env`](./env) file in the root directory.
-
-The resulting section in the `.env` file might look like this:
-
-```
-# GitHub oAuth
-GITHUB_ID=6bafeb321963449bdf51
-GITHUB_SECRET=509298c32faa283f28679ad6de6f86b2472e1bff
+```bash
+npm run db:up                  # starts PostgreSQL via Docker Compose
+npm run db:migrate             # applies Prisma migrations
+npm run db:seed                # optional: populate with sample data
 ```
 
-</details>
+### 4. Create the first admin account
 
+Start the dev server, then call the login endpoint with the bootstrap password
+to atomically create the first admin user:
 
-### 4. Start the app
-
-```
+```bash
 npm run dev
+
+# In another terminal:
+curl -X POST http://localhost:3000/api/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"you@example.com","password":"your-ADMIN_BOOTSTRAP_PASSWORD"}'
 ```
 
-The app is now running, navigate to [`http://localhost:3000/`](http://localhost:3000/) in your browser to explore its UI.
+After the admin account exists, you may remove `ADMIN_BOOTSTRAP_PASSWORD` from
+your environment.
 
-## Evolving the app
+### 5. Start the app
 
-Evolving the application typically requires three steps:
-
-1. Migrate your database using Prisma Migrate
-1. Update your server-side application code
-1. Build new UI features in React
-
-For the following example scenario, assume you want to add a "profile" feature to the app where users can create a profile and write a short bio about themselves.
-
-### 1. Migrate your database using Prisma Migrate
-
-The first step is to add a new table, e.g. called `Profile`, to the database. You can do this by adding a new model to your [Prisma schema file](./prisma/schema.prisma) file and then running a migration afterwards:
-
-```diff
-// schema.prisma
-
-model Post {
-  id        Int     @default(autoincrement()) @id
-  title     String
-  content   String?
-  published Boolean @default(false)
-  author    User?   @relation(fields: [authorId], references: [id])
-  authorId  Int
-}
-
-model User {
-  id      Int      @default(autoincrement()) @id 
-  name    String? 
-  email   String   @unique
-  posts   Post[]
-+ profile Profile?
-}
-
-+model Profile {
-+  id     Int     @default(autoincrement()) @id
-+  bio    String?
-+  userId Int     @unique
-+  user   User    @relation(fields: [userId], references: [id])
-+}
+```bash
+npm run dev
+# or for production:
+npm run build && npm start
 ```
 
-Once you've updated your data model, you can execute the changes against your database with the following command:
+## Authentication model
+
+Three independent auth channels are supported, all backed by env vars only —
+**no hardcoded secrets**:
+
+1. **NextAuth session** (preferred). Sign in via `/login` using a real bcrypt-hashed
+   password (set during registration or by an existing admin).
+2. **Bearer token / `x-admin-key` header / `admin_token` cookie** — values must
+   match one of `ADMIN_API_KEY`, `NEXTAUTH_SECRET`, or `SECRET`.
+3. **GitHub OAuth** — optional, configured via `GITHUB_ID` / `GITHUB_SECRET`.
+
+If none of the env keys are configured, `lib/auth.ts` throws at boot — misconfigured
+deployments fail fast instead of silently accepting any secret.
+
+## Project layout
 
 ```
-npx prisma migrate dev
+.
+├── components/        # React UI components (admin tabs, layout, animation)
+├── lib/               # Server-side helpers (dataService, auth, prisma, sanitize)
+├── pages/             # Next.js Pages Router (UI + /api routes)
+├── prisma/            # Schema, migrations, seed
+├── public/            # Static assets
+├── nginx/             # Reverse proxy config
+├── data/              # JSON fallback stores when DB is unavailable
+└── docker-compose.yml # Postgres + Next.js + Nginx
 ```
 
-### 2. Update your application code
+## Security notes
 
-You can now use your `PrismaClient` instance to perform operations against the new `Profile` table. Here are some examples:
+- All secrets live in environment variables — there are no hardcoded fallbacks.
+- Passwords are bcrypt-hashed (12 rounds).
+- HTML content from the database is sanitized with `isomorphic-dompurify` before rendering.
+- Admin user PII (email) is stripped from public `Knowledge` API responses.
+- `admin_token` cookie is set with `SameSite=Strict` and `Secure` (in production).
 
-#### Create a new profile for an existing user
+## Scripts
 
-```ts
-const profile = await prisma.profile.create({
-  data: {
-    bio: "Hello World",
-    user: {
-      connect: { email: "alice@prisma.io" },
-    },
-  },
-});
-```
+| Command | Purpose |
+| --- | --- |
+| `npm run dev` | Start Next.js dev server |
+| `npm run build` | Generate Prisma client + Next.js production build |
+| `npm start` | Run production build |
+| `npm run db:up` / `db:down` | Start/stop Docker Compose services |
+| `npm run db:migrate` | `prisma migrate deploy` |
+| `npm run db:push` | Push schema changes (dev only, no migrations) |
+| `npm run db:seed` | Run `prisma/seed.ts` |
+| `npm run typecheck` | `tsc --noEmit` |
 
-#### Create a new user with a new profile
+## API documentation
 
-```ts
-const user = await prisma.user.create({
-  data: {
-    email: "john@prisma.io",
-    name: "John",
-    profile: {
-      create: {
-        bio: "Hello World",
-      },
-    },
-  },
-});
-```
-
-#### Update the profile of an existing user
-
-```ts
-const userWithUpdatedProfile = await prisma.user.update({
-  where: { email: "alice@prisma.io" },
-  data: {
-    profile: {
-      update: {
-        bio: "Hello Friends",
-      },
-    },
-  },
-});
-```
-
-
-### 3. Build new UI features in React
-
-Once you have added a new endpoint to the API (e.g. `/api/profile` with `/POST`, `/PUT` and `GET` operations), you can start building a new UI component in React. It could e.g. be called `profile.tsx` and would be located in the `pages` directory.
-
-In the application code, you can access the new endpoint via `fetch` operations and populate the UI with the data you receive from the API calls.
-
-
-## Switch to another database (e.g. PostgreSQL, MySQL, SQL Server, MongoDB)
-
-If you want to try this example with another database than SQLite, you can adjust the the database connection in [`prisma/schema.prisma`](./prisma/schema.prisma) by reconfiguring the `datasource` block. 
-
-Learn more about the different connection configurations in the [docs](https://www.prisma.io/docs/reference/database-reference/connection-urls).
-
-<details><summary>Expand for an overview of example configurations with different databases</summary>
-
-### PostgreSQL
-
-For PostgreSQL, the connection URL has the following structure:
-
-```prisma
-datasource db {
-  provider = "postgresql"
-  url      = "postgresql://USER:PASSWORD@HOST:PORT/DATABASE?schema=SCHEMA"
-}
-```
-
-Here is an example connection string with a local PostgreSQL database:
-
-```prisma
-datasource db {
-  provider = "postgresql"
-  url      = "postgresql://janedoe:mypassword@localhost:5432/notesapi?schema=public"
-}
-```
-
-### MySQL
-
-For MySQL, the connection URL has the following structure:
-
-```prisma
-datasource db {
-  provider = "mysql"
-  url      = "mysql://USER:PASSWORD@HOST:PORT/DATABASE"
-}
-```
-
-Here is an example connection string with a local MySQL database:
-
-```prisma
-datasource db {
-  provider = "mysql"
-  url      = "mysql://janedoe:mypassword@localhost:3306/notesapi"
-}
-```
-
-### Microsoft SQL Server
-
-Here is an example connection string with a local Microsoft SQL Server database:
-
-```prisma
-datasource db {
-  provider = "sqlserver"
-  url      = "sqlserver://localhost:1433;initial catalog=sample;user=sa;password=mypassword;"
-}
-```
-
-### MongoDB
-
-Here is an example connection string with a local MongoDB database:
-
-```prisma
-datasource db {
-  provider = "mongodb"
-  url      = "mongodb://USERNAME:PASSWORD@HOST/DATABASE?authSource=admin&retryWrites=true&w=majority"
-}
-```
-Because MongoDB is currently in [Preview](https://www.prisma.io/docs/about/releases#preview), you need to specify the `previewFeatures` on your `generator` block:
-
-```
-generator client {
-  provider        = "prisma-client-js"
-  previewFeatures = ["mongodb"]
-}
-```
-</details>
-
-## Next steps
-
-- Check out the [Prisma docs](https://www.prisma.io/docs)
-- Share your feedback in the [Prisma Discord](https://pris.ly/discord/)
-- Create issues and ask questions on [GitHub](https://github.com/prisma/prisma/)
-- Watch our biweekly "What's new in Prisma" livestreams on [Youtube](https://www.youtube.com/channel/UCptAHlN1gdwD89tFM3ENb6w)
+Once running, visit `http://localhost:3000/docs` for the interactive Swagger UI,
+or `http://localhost:3000/api/openapi.json` for the raw OpenAPI spec.

@@ -1,5 +1,10 @@
 import { PrismaClient } from "../prisma/generated/client";
 import { PrismaPg } from "@prisma/adapter-pg";
+import { config as loadEnv } from "dotenv";
+
+if (!process.env.DATABASE_URL) {
+  loadEnv();
+}
 
 // PrismaClient is attached to the `global` object in development to prevent
 // exhausting your database connection limit.
@@ -10,7 +15,7 @@ import { PrismaPg } from "@prisma/adapter-pg";
 let prisma: PrismaClient
 
 const adapter = new PrismaPg({
-  connectionString: process.env.DATABASE_URL,
+  connectionString: process.env.DATABASE_URL || '',
 })
 if (process.env.NODE_ENV === 'production') {
   prisma = new PrismaClient({

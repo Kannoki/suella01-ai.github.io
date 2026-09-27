@@ -1,12 +1,56 @@
 import prisma from './prisma';
+import { Role, ActivityType, ActivityStatus, ProductCategory, KnowledgeCategory, KnowledgeStatus } from '../prisma/generated/enums';
+export { Role, ActivityType, ActivityStatus, ProductCategory, KnowledgeCategory, KnowledgeStatus };
 import fs from 'fs';
 import path from 'path';
+
+export function normalizeRole(r: any): Role {
+  if (!r) return Role.USER;
+  const s = String(r).toUpperCase();
+  if (s === 'ADMIN') return Role.ADMIN;
+  if (s === 'AUTHOR') return Role.AUTHOR;
+  return Role.USER;
+}
+
+export function normalizeActivityType(t: any): ActivityType {
+  if (!t) return ActivityType.WORKSHOP;
+  const s = String(t).toUpperCase();
+  if (s === 'CHALLENGE') return ActivityType.CHALLENGE;
+  if (s === 'MASTERCLASS') return ActivityType.MASTERCLASS;
+  if (s === 'PANEL') return ActivityType.PANEL;
+  return ActivityType.WORKSHOP;
+}
+
+export function normalizeActivityStatus(s: any): ActivityStatus {
+  if (!s) return ActivityStatus.OPEN;
+  const val = String(s).toUpperCase();
+  if (val === 'FULL') return ActivityStatus.FULL;
+  if (val === 'CLOSED') return ActivityStatus.CLOSED;
+  return ActivityStatus.OPEN;
+}
+
+export function normalizeProductCategory(c: any): ProductCategory {
+  if (!c) return ProductCategory.ROBOTICS;
+  const s = String(c).toUpperCase();
+  if (s === 'KNOWLEDGE') return ProductCategory.KNOWLEDGE;
+  if (s === 'IOT') return ProductCategory.IOT;
+  if (s === 'MECHATRONICS') return ProductCategory.MECHATRONICS;
+  return ProductCategory.ROBOTICS;
+}
+
+export function normalizeKnowledgeStatus(s: any): KnowledgeStatus {
+  if (!s) return KnowledgeStatus.PENDING;
+  const val = String(s).toUpperCase();
+  if (val === 'CONFIRMED') return KnowledgeStatus.CONFIRMED;
+  if (val === 'REJECTED') return KnowledgeStatus.REJECTED;
+  return KnowledgeStatus.PENDING;
+}
 
 export interface Activity {
   id: string;
   title: string;
   slug: string;
-  type: string;
+  type: ActivityType;
   date: string;
   time?: string | null;
   location?: string | null;
@@ -15,8 +59,9 @@ export interface Activity {
   image?: string | null;
   seats: number;
   registered: number;
-  status: string;
+  status: ActivityStatus;
   featured?: boolean;
+  tags: string[];
 }
 
 export interface Registration {
@@ -34,7 +79,7 @@ export interface Product {
   id: string;
   title: string;
   slug: string;
-  category: string;
+  category: ProductCategory;
   description: string;
   content?: string | null;
   image?: string | null;
@@ -80,7 +125,8 @@ export interface User {
   image?: string | null; // Base64 encoded or URL
   tagline?: string | null;
   bio?: string | null;
-  role?: string;
+  role?: Role;
+  passwordHash?: string | null;
   timeline?: TimelineItem[];
   createdAt?: string | Date;
   updatedAt?: string | Date;
@@ -112,6 +158,25 @@ export interface ContactMessage {
   createdAt: string;
 }
 
+export interface Knowledge {
+  id: string;
+  title: string;
+  slug: string;
+  category: KnowledgeCategory;
+  summary?: string | null;
+  content: string;
+  image?: string | null;
+  status: KnowledgeStatus;
+  confirmed: boolean;
+  authorId?: string | null;
+  authorName?: string | null;
+  authorEmail?: string | null;
+  authorImage?: string | null;
+  tags?: string[];
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 // Fallback JSON data loader
 function loadJsonSeed<T>(filename: string, fallback: T): T {
   try {
@@ -130,6 +195,11 @@ function saveJsonSeed<T>(filename: string, data: T): void {
   try {
     const filePath = path.join(process.cwd(), 'data', 'seeds', filename);
     fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf-8');
+
+    const publicPath = path.join(process.cwd(), 'public', 'json', filename);
+    if (fs.existsSync(path.dirname(publicPath))) {
+      fs.writeFileSync(publicPath, JSON.stringify(data, null, 2), 'utf-8');
+    }
   } catch (e) {
     console.warn(`Could not save seed ${filename}:`, e);
   }
@@ -144,16 +214,33 @@ let inMemoryAbout: AboutProfile | null = null;
 let inMemoryContact: ContactInfo | null = null;
 let inMemoryRegistrations: Registration[] = [];
 let inMemoryMessages: ContactMessage[] = [];
+let inMemoryKnowledge: Knowledge[] = [];
 
 function initFallbackStores() {
   if (inMemoryUsers.length === 0) {
-    inMemoryUsers = loadJsonSeed<User[]>('users.json', []);
+    const rawUsers = loadJsonSeed<any[]>('users.json', []);
+    inMemoryUsers = rawUsers.map((u) => ({
+      ...u,
+      role: normalizeRole(u.role),
+      timeline: normalizeTimeline(u.timeline),
+    }));
   }
   if (inMemoryActivities.length === 0) {
-    inMemoryActivities = loadJsonSeed<Activity[]>('activities.json', []);
+    const rawActs = loadJsonSeed<any[]>('activities.json', []);
+    inMemoryActivities = rawActs.map((a) => ({
+      ...a,
+      type: normalizeActivityType(a.type),
+      status: normalizeActivityStatus(a.status),
+      tags: a.tags ?? [],
+    }));
   }
   if (inMemoryProducts.length === 0) {
-    inMemoryProducts = loadJsonSeed<Product[]>('products.json', []);
+    const rawProds = loadJsonSeed<any[]>('products.json', []);
+    inMemoryProducts = rawProds.map((p) => ({
+      ...p,
+      category: normalizeProductCategory(p.category),
+      tags: p.tags ?? [],
+    }));
   }
   if (inMemoryCarousel.length === 0) {
     inMemoryCarousel = loadJsonSeed<CarouselSlide[]>('carousel.json', []);
@@ -192,16 +279,18 @@ function initFallbackStores() {
   if (inMemoryRegistrations.length === 0) {
     inMemoryRegistrations = loadJsonSeed<Registration[]>('registrations.json', []);
   }
+  if (inMemoryKnowledge.length === 0) {
+    const rawK = loadJsonSeed<any[]>('knowledge.json', []);
+    inMemoryKnowledge = rawK.map((k) => ({
+      ...k,
+      status: normalizeKnowledgeStatus(k.status),
+      tags: k.tags ?? [],
+    }));
+  }
 }
 
-export function slugify(text: string): string {
-  return text
-    .toLowerCase()
-    .trim()
-    .replace(/[^\w\s-]/g, '')
-    .replace(/\s+/g, '-')
-    .replace(/-+/g, '-');
-}
+import { slugify, toDateInputValue, formatActivityDate } from './dateUtils';
+export { slugify, toDateInputValue, formatActivityDate };
 
 // ----------------- ACTIVITIES -----------------
 
@@ -215,7 +304,7 @@ export async function getActivities(): Promise<Activity[]> {
         id: r.id,
         title: r.title,
         slug: r.slug,
-        type: r.type,
+        type: r.type as ActivityType,
         date: r.date,
         time: r.time,
         location: r.location,
@@ -224,8 +313,9 @@ export async function getActivities(): Promise<Activity[]> {
         image: r.image,
         seats: r.seats,
         registered: r.registered,
-        status: r.status,
+        status: r.status as ActivityStatus,
         featured: r.featured,
+        tags: r.tags ?? [],
       }));
     }
   } catch (err) {
@@ -247,7 +337,7 @@ export async function getActivityBySlug(slug: string): Promise<Activity | null> 
         id: record.id,
         title: record.title,
         slug: record.slug,
-        type: record.type,
+        type: record.type as ActivityType,
         date: record.date,
         time: record.time,
         location: record.location,
@@ -256,8 +346,9 @@ export async function getActivityBySlug(slug: string): Promise<Activity | null> 
         image: record.image,
         seats: record.seats,
         registered: record.registered,
-        status: record.status,
+        status: record.status as ActivityStatus,
         featured: record.featured,
+        tags: record.tags ?? [],
       };
     }
   } catch (err) {
@@ -265,7 +356,7 @@ export async function getActivityBySlug(slug: string): Promise<Activity | null> 
   }
 
   initFallbackStores();
-  return inMemoryActivities.find((a) => a.slug === slug) || null;
+  return inMemoryActivities.find((a) => a.slug === slug || a.id === slug) || null;
 }
 
 export async function createActivity(data: Partial<Activity>): Promise<Activity> {
@@ -278,20 +369,37 @@ export async function createActivity(data: Partial<Activity>): Promise<Activity>
       data: {
         title,
         slug,
-        type: data.type || 'Workshop',
+        type: data.type || ActivityType.WORKSHOP,
         date: data.date || 'TBD',
-        time: data.time || '',
+        time: data.time || null,
         location: data.location || 'Online',
         description: data.description || '',
-        content: data.content || '',
-        image: data.image || '',
+        content: data.content || null,
+        image: data.image || null,
         seats,
         registered: 0,
-        status: seats > 0 ? 'open' : 'full',
+        status: seats > 0 ? ActivityStatus.OPEN : ActivityStatus.FULL,
         featured: Boolean(data.featured),
+        tags: data.tags || [],
       },
     });
-    return created;
+    return {
+      id: created.id,
+      title: created.title,
+      slug: created.slug,
+      type: created.type as ActivityType,
+      date: created.date,
+      time: created.time,
+      location: created.location,
+      description: created.description,
+      content: created.content,
+      image: created.image,
+      seats: created.seats,
+      registered: created.registered,
+      status: created.status as ActivityStatus,
+      featured: created.featured,
+      tags: created.tags ?? [],
+    };
   } catch (err) {
     // Fallback
   }
@@ -301,7 +409,7 @@ export async function createActivity(data: Partial<Activity>): Promise<Activity>
     id: `act-${Date.now()}`,
     title,
     slug,
-    type: data.type || 'Workshop',
+    type: data.type || ActivityType.WORKSHOP,
     date: data.date || 'TBD',
     time: data.time || '',
     location: data.location || 'Online',
@@ -310,10 +418,12 @@ export async function createActivity(data: Partial<Activity>): Promise<Activity>
     image: data.image || '',
     seats,
     registered: 0,
-    status: seats > 0 ? 'open' : 'full',
+    status: seats > 0 ? ActivityStatus.OPEN : ActivityStatus.FULL,
     featured: Boolean(data.featured),
+    tags: data.tags || [],
   };
   inMemoryActivities.unshift(newActivity);
+  saveJsonSeed('activities.json', inMemoryActivities);
   return newActivity;
 }
 
@@ -326,12 +436,44 @@ export async function updateActivity(id: string, updates: Partial<Activity>): Pr
     dataToUpdate.seats = Number(updates.seats);
   }
 
+  // Recompute status from seats & registered whenever either changes
+  if (updates.seats !== undefined || updates.registered !== undefined || updates.status !== undefined) {
+    const current = await getActivityBySlug(id);
+    if (current) {
+      const seats = updates.seats !== undefined ? Number(updates.seats) : current.seats;
+      const registered = updates.registered !== undefined ? Number(updates.registered) : current.registered;
+      if (updates.status === ActivityStatus.CLOSED) {
+        dataToUpdate.status = ActivityStatus.CLOSED;
+      } else if (seats > 0 && registered >= seats) {
+        dataToUpdate.status = ActivityStatus.FULL;
+      } else {
+        dataToUpdate.status = ActivityStatus.OPEN;
+      }
+    }
+  }
+
   try {
     const updated = await prisma.activity.update({
       where: { id },
       data: dataToUpdate,
     });
-    return updated;
+    return {
+      id: updated.id,
+      title: updated.title,
+      slug: updated.slug,
+      type: updated.type as ActivityType,
+      date: updated.date,
+      time: updated.time,
+      location: updated.location,
+      description: updated.description,
+      content: updated.content,
+      image: updated.image,
+      seats: updated.seats,
+      registered: updated.registered,
+      status: updated.status as ActivityStatus,
+      featured: updated.featured,
+      tags: updated.tags ?? [],
+    };
   } catch (err) {
     // Fallback
   }
@@ -340,6 +482,7 @@ export async function updateActivity(id: string, updates: Partial<Activity>): Pr
   const idx = inMemoryActivities.findIndex((a) => a.id === id || a.slug === id);
   if (idx !== -1) {
     inMemoryActivities[idx] = { ...inMemoryActivities[idx], ...dataToUpdate };
+    saveJsonSeed('activities.json', inMemoryActivities);
     return inMemoryActivities[idx];
   }
   return null;
@@ -358,7 +501,11 @@ export async function deleteActivity(id: string): Promise<boolean> {
   initFallbackStores();
   const before = inMemoryActivities.length;
   inMemoryActivities = inMemoryActivities.filter((a) => a.id !== id && a.slug !== id);
-  return inMemoryActivities.length < before;
+  if (inMemoryActivities.length < before) {
+    saveJsonSeed('activities.json', inMemoryActivities);
+    return true;
+  }
+  return false;
 }
 
 export async function registerForActivity(
@@ -373,33 +520,50 @@ export async function registerForActivity(
     });
 
     if (activity) {
-      await prisma.$transaction([
-        prisma.registration.create({
-          data: {
-            name: regData.name,
-            email: regData.email,
-            phone: regData.phone,
-            address: regData.address || '',
-            activityId: activity.id,
-          },
-        }),
-        prisma.activity.update({
-          where: { id: activity.id },
-          data: {
-            registered: { increment: 1 },
-            status: activity.registered + 1 >= activity.seats ? 'full' : 'open',
-          },
-        }),
-      ]);
+      // Atomic seat-guarded transaction: only succeeds if seats are not full
+      // Use a conditional update that only matches when registered < seats
+      const updated = await prisma.activity.updateMany({
+        where: {
+          id: activity.id,
+          status: { not: ActivityStatus.CLOSED },
+          // Conditional: registered must be strictly less than seats
+          // (or seats must be 0 for unlimited, which we treat as no cap)
+          OR: [
+            { seats: 0 },
+            { registered: { lt: activity.seats } },
+          ],
+        },
+        data: {
+          registered: { increment: 1 },
+          status: activity.seats > 0 && activity.registered + 1 >= activity.seats ? ActivityStatus.FULL : ActivityStatus.OPEN,
+        },
+      });
+
+      if (updated.count === 0) {
+        // No rows updated — either event is full or closed
+        return false;
+      }
+
+      await prisma.registration.create({
+        data: {
+          name: regData.name,
+          email: regData.email,
+          phone: regData.phone,
+          address: regData.address || '',
+          activityId: activity.id,
+        },
+      });
       return true;
     }
   } catch (err) {
-    // Fallback
+    // Fallback to in-memory if DB unavailable
   }
 
   initFallbackStores();
   const act = inMemoryActivities.find((a) => a.id === activityIdOrSlug || a.slug === activityIdOrSlug);
   if (!act) return false;
+  if (act.seats > 0 && act.registered >= act.seats) return false;
+  if (act.status === ActivityStatus.CLOSED) return false;
 
   const newReg: Registration = {
     id: `reg-${Date.now()}`,
@@ -414,7 +578,7 @@ export async function registerForActivity(
   inMemoryRegistrations.push(newReg);
   act.registered += 1;
   if (act.registered >= act.seats) {
-    act.status = 'full';
+    act.status = ActivityStatus.FULL;
   }
   return true;
 }
@@ -431,7 +595,7 @@ export async function getProducts(): Promise<Product[]> {
         id: r.id,
         title: r.title,
         slug: r.slug,
-        category: r.category,
+        category: r.category as ProductCategory,
         description: r.description,
         content: r.content,
         image: r.image,
@@ -459,7 +623,7 @@ export async function getProductBySlug(slug: string): Promise<Product | null> {
         id: record.id,
         title: record.title,
         slug: record.slug,
-        category: record.category,
+        category: record.category as ProductCategory,
         description: record.description,
         content: record.content,
         image: record.image,
@@ -486,7 +650,7 @@ export async function createProduct(data: Partial<Product>): Promise<Product> {
       data: {
         title,
         slug,
-        category: data.category || 'Robotics',
+        category: data.category || ProductCategory.ROBOTICS,
         description: data.description || '',
         content: data.content || '',
         image: data.image || '',
@@ -496,7 +660,19 @@ export async function createProduct(data: Partial<Product>): Promise<Product> {
         featured: Boolean(data.featured),
       },
     });
-    return created;
+    return {
+      id: created.id,
+      title: created.title,
+      slug: created.slug,
+      category: created.category as ProductCategory,
+      description: created.description,
+      content: created.content,
+      image: created.image,
+      github: created.github,
+      demo: created.demo,
+      tags: created.tags,
+      featured: created.featured,
+    };
   } catch (err) {
     // Fallback
   }
@@ -506,7 +682,7 @@ export async function createProduct(data: Partial<Product>): Promise<Product> {
     id: `prod-${Date.now()}`,
     title,
     slug,
-    category: data.category || 'Robotics',
+    category: data.category || ProductCategory.ROBOTICS,
     description: data.description || '',
     content: data.content || '',
     image: data.image || '',
@@ -611,8 +787,11 @@ export async function addCarouselSlide(slide: Partial<CarouselSlide>): Promise<C
     title: slide.title || '',
     subtitle: slide.subtitle || '',
     order: slide.order !== undefined ? slide.order : inMemoryCarousel.length + 1,
+    // Persist active so getCarouselSlides() (which filters by active=true) returns this slide
+    ...({ active: true } as any),
   };
   inMemoryCarousel.push(newSlide);
+  saveJsonSeed('carousel.json', inMemoryCarousel);
   return newSlide;
 }
 
@@ -650,24 +829,40 @@ export async function getUsers(): Promise<User[]> {
     const users = await prisma.user.findMany({
       orderBy: { createdAt: 'asc' },
     });
-    return users.map((u: any) => ({
-      id: u.id,
-      name: u.name,
-      email: u.email,
-      image: u.image,
-      tagline: u.tagline,
-      bio: u.bio,
-      role: u.role || 'user',
-      timeline: normalizeTimeline(u.timeline),
-      createdAt: u.createdAt,
-      updatedAt: u.updatedAt,
-    }));
+    if (users && users.length > 0) {
+      return users.map((u: any) => ({
+        id: u.id,
+        name: u.name,
+        email: u.email,
+        image: u.image,
+        tagline: u.tagline,
+        bio: u.bio,
+        role: (u.role || Role.USER) as Role,
+        passwordHash: u.passwordHash,
+        timeline: normalizeTimeline(u.timeline),
+        createdAt: u.createdAt,
+        updatedAt: u.updatedAt,
+      }));
+    }
   } catch (err) {
     // Fallback
   }
 
   initFallbackStores();
+  const seedUsers = loadJsonSeed<User[]>('users.json', inMemoryUsers);
+  if (seedUsers && Array.isArray(seedUsers) && seedUsers.length > 0) {
+    inMemoryUsers = seedUsers;
+  }
   return inMemoryUsers;
+}
+
+/**
+ * Strips sensitive fields (like passwordHash) from a User record before returning it to clients.
+ */
+function sanitizeUser(u: User): Record<string, any> {
+  if (!u) return u as any;
+  const { passwordHash, ...safe } = u as any;
+  return safe;
 }
 
 export async function getUserById(id: string): Promise<User | null> {
@@ -683,7 +878,8 @@ export async function getUserById(id: string): Promise<User | null> {
         image: u.image,
         tagline: u.tagline,
         bio: u.bio,
-        role: u.role || 'user',
+        role: (u.role || Role.USER) as Role,
+        passwordHash: u.passwordHash,
         timeline: normalizeTimeline(u.timeline),
         createdAt: u.createdAt,
         updatedAt: u.updatedAt,
@@ -700,7 +896,7 @@ export async function getUserById(id: string): Promise<User | null> {
 export async function getUserByEmail(email: string): Promise<User | null> {
   try {
     const u: any = await prisma.user.findUnique({
-      where: { email },
+      where: { email: email.toLowerCase().trim() },
     });
     if (u) {
       return {
@@ -710,7 +906,8 @@ export async function getUserByEmail(email: string): Promise<User | null> {
         image: u.image,
         tagline: u.tagline,
         bio: u.bio,
-        role: u.role || 'user',
+        role: (u.role || Role.USER) as Role,
+        passwordHash: u.passwordHash,
         timeline: normalizeTimeline(u.timeline),
         createdAt: u.createdAt,
         updatedAt: u.updatedAt,
@@ -721,12 +918,29 @@ export async function getUserByEmail(email: string): Promise<User | null> {
   }
 
   initFallbackStores();
-  return inMemoryUsers.find((u) => u.email === email) || null;
+  return inMemoryUsers.find((u) => u.email?.toLowerCase() === email.toLowerCase()) || null;
 }
 
 export async function createUser(data: Partial<User>): Promise<User> {
   const newId = data.id || `usr-${Date.now()}`;
   const timelineVal = Array.isArray(data.timeline) ? data.timeline : [];
+
+  initFallbackStores();
+  const newUser: User = {
+    id: newId,
+    name: data.name || '',
+    email: data.email || null,
+    image: data.image || null,
+    tagline: data.tagline || null,
+    bio: data.bio || null,
+    role: data.role || Role.USER,
+    passwordHash: data.passwordHash || null,
+    timeline: timelineVal,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+  inMemoryUsers.push(newUser);
+  saveJsonSeed('users.json', inMemoryUsers);
 
   try {
     const created: any = await prisma.user.create({
@@ -737,7 +951,8 @@ export async function createUser(data: Partial<User>): Promise<User> {
         image: data.image || null,
         tagline: data.tagline || null,
         bio: data.bio || null,
-        role: data.role || 'user',
+        role: data.role || Role.USER,
+        passwordHash: data.passwordHash || null,
         timeline: timelineVal as any,
       },
     });
@@ -748,7 +963,8 @@ export async function createUser(data: Partial<User>): Promise<User> {
       image: created.image,
       tagline: created.tagline,
       bio: created.bio,
-      role: created.role,
+      role: created.role as Role,
+      passwordHash: created.passwordHash,
       timeline: normalizeTimeline(created.timeline),
       createdAt: created.createdAt,
       updatedAt: created.updatedAt,
@@ -757,27 +973,13 @@ export async function createUser(data: Partial<User>): Promise<User> {
     // Fallback
   }
 
-  initFallbackStores();
-  const newUser: User = {
-    id: newId,
-    name: data.name || '',
-    email: data.email || null,
-    image: data.image || null,
-    tagline: data.tagline || null,
-    bio: data.bio || null,
-    role: data.role || 'user',
-    timeline: timelineVal,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  };
-  inMemoryUsers.push(newUser);
-  saveJsonSeed('users.json', inMemoryUsers);
   return newUser;
 }
 
 export async function updateUser(id: string, data: Partial<User>): Promise<User> {
   const timelineVal = data.timeline !== undefined ? (Array.isArray(data.timeline) ? data.timeline : []) : undefined;
 
+  // Try Prisma first
   try {
     const updated: any = await prisma.user.update({
       where: { id },
@@ -788,6 +990,7 @@ export async function updateUser(id: string, data: Partial<User>): Promise<User>
         tagline: data.tagline !== undefined ? data.tagline : undefined,
         bio: data.bio !== undefined ? data.bio : undefined,
         role: data.role !== undefined ? data.role : undefined,
+        passwordHash: data.passwordHash !== undefined ? data.passwordHash : undefined,
         timeline: timelineVal !== undefined ? (timelineVal as any) : undefined,
       },
     });
@@ -798,38 +1001,46 @@ export async function updateUser(id: string, data: Partial<User>): Promise<User>
       image: updated.image,
       tagline: updated.tagline,
       bio: updated.bio,
-      role: updated.role,
+      role: updated.role as Role,
+      passwordHash: updated.passwordHash,
       timeline: normalizeTimeline(updated.timeline),
       createdAt: updated.createdAt,
       updatedAt: updated.updatedAt,
     };
   } catch (err) {
-    // Fallback
+    // Fall through to in-memory fallback
   }
 
+  // Fallback to in-memory update — never silently create a new user from update
   initFallbackStores();
   const idx = inMemoryUsers.findIndex((u) => u.id === id);
-  if (idx >= 0) {
-    inMemoryUsers[idx] = {
-      ...inMemoryUsers[idx],
-      name: data.name !== undefined ? data.name : inMemoryUsers[idx].name,
-      email: data.email !== undefined ? data.email : inMemoryUsers[idx].email,
-      image: data.image !== undefined ? data.image : inMemoryUsers[idx].image,
-      tagline: data.tagline !== undefined ? data.tagline : inMemoryUsers[idx].tagline,
-      bio: data.bio !== undefined ? data.bio : inMemoryUsers[idx].bio,
-      role: data.role !== undefined ? data.role : inMemoryUsers[idx].role,
-      timeline: timelineVal !== undefined ? timelineVal : inMemoryUsers[idx].timeline,
-      updatedAt: new Date().toISOString(),
-    };
-    saveJsonSeed('users.json', inMemoryUsers);
-    return inMemoryUsers[idx];
+  if (idx === -1) {
+    throw new Error(`User not found: ${id}`);
   }
-
-  // If not found in memory, create it
-  return createUser({ ...data, id });
+  inMemoryUsers[idx] = {
+    ...inMemoryUsers[idx],
+    name: data.name !== undefined ? data.name : inMemoryUsers[idx].name,
+    email: data.email !== undefined ? data.email : inMemoryUsers[idx].email,
+    image: data.image !== undefined ? data.image : inMemoryUsers[idx].image,
+    tagline: data.tagline !== undefined ? data.tagline : inMemoryUsers[idx].tagline,
+    bio: data.bio !== undefined ? data.bio : inMemoryUsers[idx].bio,
+    role: data.role !== undefined ? data.role : inMemoryUsers[idx].role,
+    passwordHash: data.passwordHash !== undefined ? data.passwordHash : inMemoryUsers[idx].passwordHash,
+    timeline: timelineVal !== undefined ? timelineVal : inMemoryUsers[idx].timeline,
+    updatedAt: new Date().toISOString(),
+  };
+  saveJsonSeed('users.json', inMemoryUsers);
+  return inMemoryUsers[idx];
 }
 
 export async function deleteUser(id: string): Promise<boolean> {
+  initFallbackStores();
+  const before = inMemoryUsers.length;
+  inMemoryUsers = inMemoryUsers.filter((u) => u.id !== id);
+  if (inMemoryUsers.length < before) {
+    saveJsonSeed('users.json', inMemoryUsers);
+  }
+
   try {
     await prisma.user.delete({ where: { id } });
     return true;
@@ -837,24 +1048,25 @@ export async function deleteUser(id: string): Promise<boolean> {
     // Fallback
   }
 
-  initFallbackStores();
-  const before = inMemoryUsers.length;
-  inMemoryUsers = inMemoryUsers.filter((u) => u.id !== id);
-  if (inMemoryUsers.length < before) {
-    saveJsonSeed('users.json', inMemoryUsers);
-    return true;
-  }
-  return false;
+  return inMemoryUsers.length < before;
 }
 
-// ----------------- ABOUT & PROFILE (Backed by Primary User) -----------------
+// ----------------- ABOUT & PROFILE (Backed by Primary Admin User) -----------------
+
+/**
+ * Finds the canonical admin user for site-wide About profile data.
+ * Strictly prefers role === Role.ADMIN (set in DB); never falls back to brittle string matching.
+ */
+async function findPrimaryAdminUser(): Promise<User | null> {
+  const users = await getUsers();
+  return (
+    users.find((u) => u.role === Role.ADMIN) ||
+    null
+  );
+}
 
 export async function getAboutProfile(): Promise<AboutProfile> {
-  const users = await getUsers();
-  const primary =
-    users.find((u) => u.role === 'admin') ||
-    users.find((u) => u.name?.toUpperCase().includes('MINH NGOC')) ||
-    users[0];
+  const primary = await findPrimaryAdminUser();
 
   if (primary) {
     return {
@@ -880,11 +1092,7 @@ export async function getAboutProfile(): Promise<AboutProfile> {
 }
 
 export async function updateAboutProfile(data: Partial<AboutProfile>): Promise<AboutProfile> {
-  const users = await getUsers();
-  const primary =
-    users.find((u) => u.role === 'admin') ||
-    users.find((u) => u.name?.toUpperCase().includes('MINH NGOC')) ||
-    users[0];
+  const primary = await findPrimaryAdminUser();
 
   const imageVal = data.image !== undefined ? data.image : data.photoUrl;
 
@@ -907,11 +1115,11 @@ export async function updateAboutProfile(data: Partial<AboutProfile>): Promise<A
     };
   }
 
-  // If no user exists yet, create primary user
+  // If no admin user exists yet, create one
   const created = await createUser({
     name: data.name || 'MINH NGOC',
     email: 'admin@mechgirl.com',
-    role: 'admin',
+    role: Role.ADMIN,
     tagline: data.tagline || 'Mechanical Engineering Student & STEM Advocate',
     bio: data.bio || '',
     image: imageVal,
@@ -932,28 +1140,25 @@ export async function updateAboutProfile(data: Partial<AboutProfile>): Promise<A
 // ----------------- CONTACT & MESSAGES -----------------
 
 export async function getContactInfo(): Promise<ContactInfo> {
-  try {
-    const contact = await prisma.contactInfo.findFirst();
-    if (contact) {
-      return {
-        id: contact.id,
-        name: contact.name,
-        tagline: contact.tagline,
-        email: contact.email,
-        phone: contact.phone,
-        address: contact.address,
-        about: contact.about,
-        socials: {
-          facebook: contact.facebook || undefined,
-          youtube: contact.youtube || undefined,
-          github: contact.github || undefined,
-          instagram: contact.instagram || undefined,
-          linkedin: contact.linkedin || undefined,
-        },
-      };
-    }
-  } catch (err) {
-    // Fallback
+  // Always load latest contact from JSON seed file - no database table required
+  const rawContact = loadJsonSeed<any>('contact.json', inMemoryContact || null);
+  if (rawContact) {
+    inMemoryContact = {
+      name: rawContact.name || 'MechGirl',
+      tagline: rawContact.tagline || 'Dream it, Scheme it, STEM it!',
+      email: rawContact.email || 'contact@mechgirl.com',
+      phone: rawContact.phone || '+1 (555) 123-4567',
+      address: rawContact.address || '123 Engineering Way, Innovation District, CA 94043',
+      about: rawContact.about || '',
+      socials: {
+        facebook: rawContact.socials?.facebook || '',
+        youtube: rawContact.socials?.youtube || '',
+        github: rawContact.socials?.github || '',
+        instagram: rawContact.socials?.instagram || '',
+        linkedin: rawContact.socials?.linkedin || '',
+      },
+    };
+    return inMemoryContact;
   }
 
   initFallbackStores();
@@ -961,20 +1166,36 @@ export async function getContactInfo(): Promise<ContactInfo> {
 }
 
 export async function updateContactInfo(data: Partial<ContactInfo>): Promise<ContactInfo> {
+  const current = await getContactInfo();
+  const updatedSocials = {
+    ...(current.socials || {}),
+    ...(data.socials || {}),
+  };
+
+  inMemoryContact = {
+    ...current,
+    ...data,
+    socials: updatedSocials,
+  };
+
+  // Persist directly to contact.json (both data/seeds and public/json) - no database table required!
+  saveJsonSeed('contact.json', inMemoryContact);
+
+  // Optional: keep DB synchronized if Prisma is connected, without failing if table does not exist
   try {
     let contact = await prisma.contactInfo.findFirst();
     const updatePayload = {
-      name: data.name,
-      tagline: data.tagline,
-      email: data.email,
-      phone: data.phone,
-      address: data.address,
-      about: data.about,
-      facebook: data.socials?.facebook,
-      youtube: data.socials?.youtube,
-      github: data.socials?.github,
-      instagram: data.socials?.instagram,
-      linkedin: data.socials?.linkedin,
+      name: inMemoryContact.name,
+      tagline: inMemoryContact.tagline,
+      email: inMemoryContact.email,
+      phone: inMemoryContact.phone,
+      address: inMemoryContact.address,
+      about: inMemoryContact.about,
+      facebook: inMemoryContact.socials?.facebook,
+      youtube: inMemoryContact.socials?.youtube,
+      github: inMemoryContact.socials?.github,
+      instagram: inMemoryContact.socials?.instagram,
+      linkedin: inMemoryContact.socials?.linkedin,
     };
 
     if (contact) {
@@ -984,31 +1205,14 @@ export async function updateContactInfo(data: Partial<ContactInfo>): Promise<Con
       });
     } else {
       await prisma.contactInfo.create({
-        data: {
-          name: data.name || 'MechGirl',
-          tagline: data.tagline || '',
-          email: data.email || 'contact@mechgirl.com',
-          phone: data.phone || '',
-          address: data.address || '',
-          about: data.about || '',
-          facebook: data.socials?.facebook || '',
-          youtube: data.socials?.youtube || '',
-          github: data.socials?.github || '',
-          instagram: data.socials?.instagram || '',
-          linkedin: data.socials?.linkedin || '',
-        },
+        data: updatePayload,
       });
     }
-    return getContactInfo();
   } catch (err) {
-    // Fallback
+    // Database table not required, ignore silently
   }
 
-  initFallbackStores();
-  if (inMemoryContact) {
-    inMemoryContact = { ...inMemoryContact, ...data };
-  }
-  return inMemoryContact!;
+  return inMemoryContact;
 }
 
 export async function submitContactMessage(msg: {
@@ -1104,16 +1308,285 @@ export async function getRegistrations(): Promise<Registration[]> {
 
 export async function deleteRegistration(id: string): Promise<boolean> {
   try {
-    await prisma.registration.delete({
-      where: { id },
-    });
+    // Fetch the registration first so we know which activity to update
+    const reg = await prisma.registration.findUnique({ where: { id } });
+    if (!reg) return false;
+
+    // Transactional: delete registration, then decrement activity counter and recompute status
+    await prisma.$transaction([
+      prisma.registration.delete({ where: { id } }),
+      prisma.activity.update({
+        where: { id: reg.activityId },
+        data: {
+          registered: { decrement: 1 },
+        },
+      }),
+    ]);
+
+    // Recompute status after decrement (separate read since the activity update above only decrements)
+    const act = await prisma.activity.findUnique({ where: { id: reg.activityId } });
+    if (act && act.status !== ActivityStatus.CLOSED) {
+      const newStatus = act.seats > 0 && act.registered >= act.seats ? ActivityStatus.FULL : ActivityStatus.OPEN;
+      if (newStatus !== act.status) {
+        await prisma.activity.update({ where: { id: reg.activityId }, data: { status: newStatus } });
+      }
+    }
+
     return true;
+  } catch (err) {
+    // Fallback to in-memory
+  }
+
+  initFallbackStores();
+  const before = inMemoryRegistrations.length;
+  const regToDelete = inMemoryRegistrations.find((r) => r.id === id);
+  inMemoryRegistrations = inMemoryRegistrations.filter((r) => r.id !== id);
+  const deleted = inMemoryRegistrations.length < before;
+  if (deleted && regToDelete) {
+    const act = inMemoryActivities.find((a) => a.id === regToDelete.activityId);
+    if (act && act.registered > 0) {
+      act.registered -= 1;
+      if (act.status !== ActivityStatus.CLOSED && act.registered < act.seats) {
+        act.status = ActivityStatus.OPEN;
+      }
+    }
+  }
+  return deleted;
+}
+
+// ----------------- COMMON KNOWLEDGE (BLOGS & COMMUNITY ARTICLES) -----------------
+
+export async function getKnowledgeList(filter?: {
+  status?: KnowledgeStatus | 'all';
+  authorEmail?: string;
+  search?: string;
+}): Promise<Knowledge[]> {
+  try {
+    const whereClause: any = {};
+    if (filter?.status && (filter.status as any) !== 'all') {
+      whereClause.status = filter.status;
+      // Always require confirmed=true alongside an explicit status filter
+      // so we don't surface unconfirmed rows even if status was set externally
+      whereClause.confirmed = true;
+    }
+    if (filter?.authorEmail) {
+      whereClause.authorEmail = filter.authorEmail;
+    }
+    const records: any = await (prisma as any).knowledge?.findMany({
+      where: Object.keys(whereClause).length > 0 ? whereClause : { confirmed: true },
+      orderBy: { createdAt: 'desc' },
+    });
+    if (records && records.length > 0) {
+      return records.map((k: any) => ({
+        ...k,
+        createdAt: k.createdAt instanceof Date ? k.createdAt.toISOString() : k.createdAt,
+        updatedAt: k.updatedAt instanceof Date ? k.updatedAt.toISOString() : k.updatedAt,
+      }));
+    }
   } catch (err) {
     // Fallback
   }
 
   initFallbackStores();
-  const before = inMemoryRegistrations.length;
-  inMemoryRegistrations = inMemoryRegistrations.filter((r) => r.id !== id);
-  return inMemoryRegistrations.length < before;
+  const seed = loadJsonSeed<Knowledge[]>('knowledge.json', inMemoryKnowledge);
+  if (seed && Array.isArray(seed) && seed.length > 0) {
+    inMemoryKnowledge = seed.map((k) => ({
+      ...k,
+      status: normalizeKnowledgeStatus(k.status),
+      tags: k.tags ?? [],
+    }));
+  }
+
+  let list = [...inMemoryKnowledge];
+
+  // Both DB and JSON branches must require confirmed=true unless explicitly opting in
+  if (filter?.status && (filter.status as any) !== 'all') {
+    list = list.filter((k) => k.status === filter.status && k.confirmed);
+  } else {
+    // No status filter — default to confirmed only for public listing
+    list = list.filter((k) => k.confirmed);
+  }
+  if (filter?.authorEmail) {
+    list = list.filter((k) => k.authorEmail?.toLowerCase() === filter.authorEmail?.toLowerCase());
+  }
+  if (filter?.search) {
+    const q = filter.search.toLowerCase();
+    list = list.filter(
+      (k) =>
+        k.title.toLowerCase().includes(q) ||
+        k.category.toLowerCase().includes(q) ||
+        (k.summary && k.summary.toLowerCase().includes(q)) ||
+        k.content.toLowerCase().includes(q)
+    );
+  }
+
+  return list;
+}
+
+export async function getKnowledgeBySlug(slug: string): Promise<Knowledge | null> {
+  try {
+    const record: any = await (prisma as any).knowledge?.findUnique({
+      where: { slug },
+    });
+    if (record) {
+      return {
+        ...record,
+        createdAt: record.createdAt instanceof Date ? record.createdAt.toISOString() : record.createdAt,
+        updatedAt: record.updatedAt instanceof Date ? record.updatedAt.toISOString() : record.updatedAt,
+      };
+    }
+  } catch (err) {
+    // Fallback
+  }
+
+  initFallbackStores();
+  const list = await getKnowledgeList();
+  return list.find((k) => k.slug === slug) || null;
+}
+
+export async function getKnowledgeById(id: string): Promise<Knowledge | null> {
+  try {
+    const record: any = await (prisma as any).knowledge?.findUnique({
+      where: { id },
+    });
+    if (record) {
+      return {
+        ...record,
+        createdAt: record.createdAt instanceof Date ? record.createdAt.toISOString() : record.createdAt,
+        updatedAt: record.updatedAt instanceof Date ? record.updatedAt.toISOString() : record.updatedAt,
+      };
+    }
+  } catch (err) {
+    // Fallback
+  }
+
+  initFallbackStores();
+  const list = await getKnowledgeList();
+  return list.find((k) => k.id === id) || null;
+}
+
+export async function createKnowledge(data: Partial<Knowledge>): Promise<Knowledge> {
+  initFallbackStores();
+  const id = data.id || `know-${Date.now()}`;
+  const title = data.title || 'Untitled Knowledge';
+  const slug = data.slug || slugify(title) + '-' + Math.floor(Math.random() * 1000);
+  const status = data.status || KnowledgeStatus.PENDING;
+  const confirmed = data.confirmed ?? (status === KnowledgeStatus.CONFIRMED);
+
+  const newArticle: Knowledge = {
+    id,
+    title,
+    slug,
+    category: data.category || KnowledgeCategory.ENGINEERING,
+    summary: data.summary || '',
+    content: data.content || '',
+    image: data.image || null,
+    status,
+    confirmed,
+    authorId: data.authorId || null,
+    authorName: data.authorName || 'Community Member',
+    authorEmail: data.authorEmail || null,
+    authorImage: data.authorImage || null,
+    tags: Array.isArray(data.tags) ? data.tags : [],
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+
+  inMemoryKnowledge.unshift(newArticle);
+  saveJsonSeed('knowledge.json', inMemoryKnowledge);
+
+  try {
+    await (prisma as any).knowledge?.create({
+      data: {
+        id: newArticle.id,
+        title: newArticle.title,
+        slug: newArticle.slug,
+        category: newArticle.category,
+        summary: newArticle.summary,
+        content: newArticle.content,
+        image: newArticle.image,
+        status: newArticle.status,
+        confirmed: newArticle.confirmed,
+        authorId: newArticle.authorId,
+        authorName: newArticle.authorName,
+        authorEmail: newArticle.authorEmail,
+        authorImage: newArticle.authorImage,
+        tags: newArticle.tags,
+      },
+    });
+  } catch (err) {
+    // Fallback
+  }
+
+  return newArticle;
+}
+
+export async function updateKnowledge(id: string, updates: Partial<Knowledge>): Promise<Knowledge | null> {
+  initFallbackStores();
+  const idx = inMemoryKnowledge.findIndex((k) => k.id === id || k.slug === id);
+  if (idx === -1) return null;
+
+  const target = inMemoryKnowledge[idx];
+  const newStatus = updates.status !== undefined ? updates.status : target.status;
+  const newConfirmed = updates.confirmed !== undefined ? updates.confirmed : (newStatus === KnowledgeStatus.CONFIRMED);
+
+  const updated: Knowledge = {
+    ...target,
+    ...updates,
+    status: newStatus,
+    confirmed: newConfirmed,
+    updatedAt: new Date().toISOString(),
+  };
+
+  inMemoryKnowledge[idx] = updated;
+  saveJsonSeed('knowledge.json', inMemoryKnowledge);
+
+  try {
+    await (prisma as any).knowledge?.update({
+      where: { id: target.id },
+      data: {
+        title: updates.title,
+        slug: updates.slug,
+        category: updates.category,
+        summary: updates.summary,
+        content: updates.content,
+        image: updates.image,
+        status: newStatus,
+        confirmed: newConfirmed,
+        tags: updates.tags,
+      },
+    });
+  } catch (err) {
+    // Fallback
+  }
+
+  return updated;
+}
+
+export async function confirmKnowledge(id: string, confirmed: boolean): Promise<Knowledge | null> {
+  return updateKnowledge(id, {
+    confirmed,
+    status: confirmed ? KnowledgeStatus.CONFIRMED : KnowledgeStatus.REJECTED,
+  });
+}
+
+export async function deleteKnowledge(id: string): Promise<boolean> {
+  initFallbackStores();
+  const before = inMemoryKnowledge.length;
+  inMemoryKnowledge = inMemoryKnowledge.filter((k) => k.id !== id && k.slug !== id);
+  const deleted = inMemoryKnowledge.length < before;
+
+  if (deleted) {
+    saveJsonSeed('knowledge.json', inMemoryKnowledge);
+  }
+
+  try {
+    await (prisma as any).knowledge?.delete({
+      where: { id },
+    });
+  } catch (err) {
+    // Fallback
+  }
+
+  return deleted;
 }
