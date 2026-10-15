@@ -341,19 +341,24 @@ export async function deleteProduct(id: string): Promise<boolean> {
 // ── HERO CAROUSEL ────────────────────────────────────────────────────────────
 
 export async function getCarouselSlides(): Promise<CarouselSlide[]> {
-  const snap = await adminDb
-    .collection('carousel_slides')
-    .where('active', '==', true)
-    .orderBy('order', 'asc')
-    .get();
-  return snap.docs.map((d) => ({
-    id: d.id,
-    src: d.data().src,
-    alt: d.data().alt ?? null,
-    title: d.data().title ?? null,
-    subtitle: d.data().subtitle ?? null,
-    order: d.data().order ?? 0,
-  }));
+  try {
+    const snap = await adminDb.collection('carousel_slides').get();
+    return snap.docs
+      .map((d) => ({
+        id: d.id,
+        src: d.data().src,
+        alt: d.data().alt ?? null,
+        title: d.data().title ?? null,
+        subtitle: d.data().subtitle ?? null,
+        order: d.data().order ?? 0,
+        active: d.data().active !== false,
+      }))
+      .filter((s) => s.active)
+      .sort((a, b) => a.order - b.order);
+  } catch (err) {
+    console.error('getCarouselSlides error:', err);
+    return [];
+  }
 }
 
 export async function addCarouselSlide(slide: Partial<CarouselSlide>): Promise<CarouselSlide> {
@@ -681,40 +686,44 @@ export async function getKnowledgeList(filter?: {
   authorEmail?: string;
   search?: string;
 }): Promise<Knowledge[]> {
-  let q: any = adminDb.collection('knowledge');
+  try {
+    const snap = await adminDb.collection('knowledge').get();
 
-  if (filter?.status && filter.status !== 'all') {
-    q = q.where('status', '==', filter.status).where('confirmed', '==', true);
-  } else {
-    q = q.where('confirmed', '==', true);
+    let list: Knowledge[] = snap.docs.map((d: QueryDocumentSnapshot) => ({
+      id: d.id,
+      ...d.data(),
+      createdAt: toISOString(d.data().createdAt),
+      updatedAt: toISOString(d.data().updatedAt),
+    })) as Knowledge[];
+
+    if (filter?.status && filter.status !== 'all') {
+      list = list.filter((k) => k.status === filter.status && k.confirmed === true);
+    } else if (!filter?.status) {
+      list = list.filter((k) => k.confirmed === true);
+    }
+
+    if (filter?.authorEmail) {
+      list = list.filter((k) => k.authorEmail === filter.authorEmail);
+    }
+
+    list.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+
+    if (filter?.search) {
+      const q2 = filter.search.toLowerCase();
+      list = list.filter(
+        (k) =>
+          k.title.toLowerCase().includes(q2) ||
+          k.category.toLowerCase().includes(q2) ||
+          (k.summary && k.summary.toLowerCase().includes(q2)) ||
+          k.content.toLowerCase().includes(q2)
+      );
+    }
+
+    return list;
+  } catch (err) {
+    console.error('getKnowledgeList error:', err);
+    return [];
   }
-
-  if (filter?.authorEmail) {
-    q = q.where('authorEmail', '==', filter.authorEmail);
-  }
-
-  q = q.orderBy('createdAt', 'desc');
-  const snap = await q.get();
-
-  let list: Knowledge[] = snap.docs.map((d: QueryDocumentSnapshot) => ({
-    id: d.id,
-    ...d.data(),
-    createdAt: toISOString(d.data().createdAt),
-    updatedAt: toISOString(d.data().updatedAt),
-  })) as Knowledge[];
-
-  if (filter?.search) {
-    const q2 = filter.search.toLowerCase();
-    list = list.filter(
-      (k) =>
-        k.title.toLowerCase().includes(q2) ||
-        k.category.toLowerCase().includes(q2) ||
-        (k.summary && k.summary.toLowerCase().includes(q2)) ||
-        k.content.toLowerCase().includes(q2)
-    );
-  }
-
-  return list;
 }
 
 export async function getKnowledgeBySlug(slug: string): Promise<Knowledge | null> {

@@ -2,8 +2,8 @@
   "name": "MINH NGOC",
   "tagline": "Mechanical Engineering Student & STEM Advocate",
   "bio": "A passionate mechanical engineering student exploring mechanics, robotics, and tech.",
-  "image": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkWPjfDwAEfQHzA6m57QAAAABJRU5ErkJggg==",
-  "photoUrl": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkWPjfDwAEfQHzA6m57QAAAABJRU5ErkJggg==",
+  "image": "/asset/avatars/minh-ngoc.jpg",
+  "photoUrl": "/asset/avatars/minh-ngoc.jpg",
   "timeline": [
     {
       "id": "tl-1",
