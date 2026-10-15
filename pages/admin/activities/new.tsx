@@ -3,7 +3,7 @@ import { useRouter } from 'next/router';
 import Layout from '../../../components/Layout';
 import ActivityForm from '../../../components/admin/ActivityForm';
 import { getLoggedInUser } from '../../../lib/clientAuth';
-import { Role } from '../../../prisma/generated/enums';
+import { Role } from '../../../lib/types';
 
 export default function NewActivityPage() {
   const router = useRouter();

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import type { User, TimelineItem } from '../../lib/dataService';
+import type { User, TimelineItem } from '../../lib/types';
 import { getAuthHeaders, compressImageFile } from '../../lib/clientAuth';
-import { Role } from '../../prisma/generated/enums';
+import { Role } from '../../lib/types';
 
 const ROLE_OPTIONS: Role[] = [Role.USER, Role.AUTHOR, Role.ADMIN];
 

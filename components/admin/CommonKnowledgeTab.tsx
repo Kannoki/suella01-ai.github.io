@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import type { Knowledge } from '../../lib/dataService';
+import type { Knowledge } from '../../lib/types';
 import { getAuthHeaders, compressImageFile } from '../../lib/clientAuth';
-import { KnowledgeCategory, KnowledgeStatus } from '../../prisma/generated/enums';
+import { KnowledgeCategory, KnowledgeStatus } from '../../lib/types';
 
 interface CommonKnowledgeTabProps {
   currentUser?: any | null;

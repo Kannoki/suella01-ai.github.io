@@ -2,7 +2,7 @@ import React from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import HeroCarousel from './HeroCarousel';
-import type { CarouselSlide } from '../lib/dataService';
+import type { CarouselSlide } from '../lib/types';
 
 interface HeroProps {
   slides?: CarouselSlide[];

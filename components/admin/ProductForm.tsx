@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
-import type { Product } from '../../lib/dataService';
+import type { Product } from '../../lib/types';
 import { getAuthHeaders } from '../../lib/clientAuth';
-import { ProductCategory } from '../../prisma/generated/enums';
+import { ProductCategory } from '../../lib/types';
 
 interface ProductFormProps {
   initialData?: Product | null;

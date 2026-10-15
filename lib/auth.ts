@@ -1,11 +1,10 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '../pages/api/auth/[...nextauth]';
+import { adminAuth } from './firebaseAdmin';
 
 /**
  * Returns the list of valid admin API keys, sourced exclusively from environment variables.
- * Throws at module load if neither ADMIN_API_KEY nor NEXTAUTH_SECRET is configured,
- * so misconfigured deployments fail fast instead of silently accepting hardcoded fallbacks.
  */
 function getValidKeys(): Set<string> {
   const keys = new Set<string>();
@@ -30,12 +29,13 @@ function getValidKeys(): Set<string> {
 /**
  * Checks whether the incoming Next.js API request has valid authentication:
  * 1. An active NextAuth user session (server-side, using authOptions).
- * 2. An Authorization header with Bearer token matching an admin key.
- * 3. An x-admin-key header matching an admin key.
- * 4. An admin_token cookie matching an admin key (SameSite=Strict, Secure).
+ * 2. A Firebase ID token in the Authorization: Bearer header.
+ * 3. An Authorization header with Bearer token matching an admin key.
+ * 4. An x-admin-key header matching an admin key.
+ * 5. An admin_token cookie matching an admin key (SameSite=Strict, Secure).
  */
 export async function checkAuth(req: NextApiRequest, res?: NextApiResponse): Promise<boolean> {
-  // 1. Check NextAuth session (server-side, properly configured)
+  // 1. Check NextAuth session (server-side)
   try {
     const session = await getServerSession(
       req,
@@ -46,33 +46,44 @@ export async function checkAuth(req: NextApiRequest, res?: NextApiResponse): Pro
       return true;
     }
   } catch {
-    // Session check failed or unconfigured, continue checking API keys
+    // Session check failed or unconfigured, continue
+  }
+
+  const authHeader = req.headers.authorization;
+  const bearerToken =
+    authHeader && typeof authHeader === 'string' && authHeader.toLowerCase().startsWith('bearer ')
+      ? authHeader.substring(7).trim()
+      : null;
+
+  // 2. Try Firebase ID token verification
+  if (bearerToken) {
+    try {
+      await adminAuth.verifyIdToken(bearerToken);
+      return true;
+    } catch {
+      // Not a valid Firebase token — fall through to static key check
+    }
   }
 
   let validKeys: Set<string>;
   try {
     validKeys = getValidKeys();
   } catch {
-    // If no keys are configured, only authenticated sessions are valid
     return false;
   }
 
-  // 2. Check Authorization: Bearer <token>
-  const authHeader = req.headers.authorization;
-  if (authHeader && typeof authHeader === 'string' && authHeader.toLowerCase().startsWith('bearer ')) {
-    const token = authHeader.substring(7).trim();
-    if (validKeys.has(token)) {
-      return true;
-    }
+  // 3. Check Authorization: Bearer <static admin key>
+  if (bearerToken && validKeys.has(bearerToken)) {
+    return true;
   }
 
-  // 3. Check x-admin-key: <key>
+  // 4. Check x-admin-key header
   const customKey = req.headers['x-admin-key'];
   if (typeof customKey === 'string' && validKeys.has(customKey.trim())) {
     return true;
   }
 
-  // 4. Check admin_token cookie
+  // 5. Check admin_token cookie
   const cookieHeader = req.headers.cookie;
   if (cookieHeader && typeof cookieHeader === 'string') {
     const match = cookieHeader.match(/(?:^|;\s*)admin_token=([^;]+)/);
@@ -100,7 +111,7 @@ export async function requireAuth(
     res.status(401).json({
       error: 'Unauthorized: Authentication required to edit data.',
       message:
-        'Please sign in via NextAuth or provide a valid Bearer token or x-admin-key header.',
+        'Please sign in via NextAuth / Firebase Auth or provide a valid Bearer token or x-admin-key header.',
     });
     return false;
   }

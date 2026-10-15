@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import Layout from '../../../components/Layout';
 import ActivityForm from '../../../components/admin/ActivityForm';
-import { Activity } from '../../../lib/dataService';
+import { Activity } from '../../../lib/types';
 import { getLoggedInUser } from '../../../lib/clientAuth';
 
 export default function EditActivityPage() {

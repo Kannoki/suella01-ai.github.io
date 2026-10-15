@@ -4,8 +4,8 @@ import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import Layout from '../../components/Layout';
 import { AnimatedSection } from '../../components/AnimatedSection';
-import { getActivities, type Activity, getKnowledgeList, type Knowledge } from '../../lib/dataService';
-import { ActivityStatus, KnowledgeStatus } from '../../prisma/generated/enums';
+import { getActivities, getKnowledgeList } from '../../lib/dataService';
+import { ActivityStatus, KnowledgeStatus, type Activity, type Knowledge } from '../../lib/types';
 import { formatActivityDate } from '../../lib/dateUtils';
 
 export const getStaticProps: GetStaticProps = async () => {

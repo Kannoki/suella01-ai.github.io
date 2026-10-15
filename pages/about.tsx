@@ -3,8 +3,8 @@ import type { GetStaticProps } from 'next';
 import { motion } from 'framer-motion';
 import Layout from '../components/Layout';
 import { AnimatedSection, AnimatedStagger, StaggerItem } from '../components/AnimatedSection';
-import { getAboutProfile, type AboutProfile, getUsers, type User } from '../lib/dataService';
-import { Role } from '../prisma/generated/enums';
+import { getAboutProfile, getUsers } from '../lib/dataService';
+import { Role, type AboutProfile, type User } from '../lib/types';
 
 export const getStaticProps: GetStaticProps = async () => {
   try {

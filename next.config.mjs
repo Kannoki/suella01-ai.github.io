@@ -23,6 +23,8 @@ const nextConfig = {
         net: false,
         tls: false,
         dns: false,
+        http2: false,
+        child_process: false,
         pg: false,
         '@prisma/adapter-pg': false,
         'pg-native': false,

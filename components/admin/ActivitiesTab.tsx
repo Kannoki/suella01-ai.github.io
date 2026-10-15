@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import type { Activity } from '../../lib/dataService';
+import type { Activity } from '../../lib/types';
 import { formatActivityDate } from '../../lib/dateUtils';
 import { getAuthHeaders } from '../../lib/clientAuth';
-import { ActivityType, ActivityStatus } from '../../prisma/generated/enums';
+import { ActivityType, ActivityStatus } from '../../lib/types';
 
 const TYPE_FILTERS: (ActivityType | 'All')[] = [
   'All',

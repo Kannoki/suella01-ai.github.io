@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import type { CarouselSlide } from '../../lib/dataService';
+import type { CarouselSlide } from '../../lib/types';
 import { getAuthHeaders } from '../../lib/clientAuth';
 
 export default function CarouselTab() {

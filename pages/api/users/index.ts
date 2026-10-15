@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth/next';
 import { getUsers, createUser } from '../../../lib/dataService';
 import { checkAuth } from '../../../lib/auth';
 import { authOptions } from '../auth/[...nextauth]';
-import { Role } from '../../../prisma/generated/enums';
+import { Role } from '../../../lib/dataService';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method === 'GET') {

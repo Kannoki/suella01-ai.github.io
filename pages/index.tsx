@@ -10,11 +10,13 @@ import {
   getActivities,
   getProducts,
   getCarouselSlides,
+} from '../lib/dataService';
+import {
+  ActivityStatus,
   type Activity,
   type Product,
   type CarouselSlide,
-} from '../lib/dataService';
-import { ActivityStatus } from '../prisma/generated/enums';
+} from '../lib/types';
 import { formatActivityDate } from '../lib/dateUtils';
 
 export const getStaticProps: GetStaticProps = async () => {

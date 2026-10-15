@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getKnowledgeList, createKnowledge } from '../../../lib/dataService';
 import { requireAuth } from '../../../lib/auth';
-import { KnowledgeCategory, KnowledgeStatus } from '../../../prisma/generated/enums';
+import { KnowledgeCategory, KnowledgeStatus } from '../../../lib/dataService';
 
 /**
  * Strips author PII (email) from knowledge articles before returning them publicly.

@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth/next';
 import { getUserById, updateUser, deleteUser } from '../../../lib/dataService';
 import { checkAuth } from '../../../lib/auth';
 import { authOptions } from '../auth/[...nextauth]';
-import { Role } from '../../../prisma/generated/enums';
+import { Role } from '../../../lib/dataService';
 
 /**
  * Returns true if the request is authenticated as an admin (either via API key

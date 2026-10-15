@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import Layout from '../../../components/Layout';
 import ProductForm from '../../../components/admin/ProductForm';
-import { Product } from '../../../lib/dataService';
+import { Product } from '../../../lib/types';
 
 export default function EditProductPage() {
   const router = useRouter();

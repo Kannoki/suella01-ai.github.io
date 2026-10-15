@@ -1,12 +1,11 @@
 import { NextApiHandler } from "next";
 import NextAuth, { NextAuthOptions } from "next-auth";
-import { PrismaAdapter } from '@next-auth/prisma-adapter';
+import { FirestoreAdapter } from '@next-auth/firebase-adapter';
 import GitHubProvider from 'next-auth/providers/github';
 import CredentialsProvider from 'next-auth/providers/credentials';
-import prisma from '../../../lib/prisma';
-import { getUserByEmail, getUserById, getUsers } from '../../../lib/dataService';
+import { adminDb } from '../../../lib/firebaseAdmin';
+import { getUserByEmail, getUserById, getUsers, Role } from '../../../lib/dataService';
 import { verifyPassword } from '../../../lib/passwords';
-import { Role } from '../../../prisma/generated/enums';
 
 // Ensure a secret is configured at boot — fail fast rather than silently accepting misconfigured deployments.
 const authSecret = process.env.NEXTAUTH_SECRET || process.env.SECRET || 'mechgirl-suella-secret-key-32charsmin!';
@@ -34,13 +33,13 @@ export const authOptions: NextAuthOptions = {
           let user = await getUserByEmail(email);
           if (!user && (email === 'admin@mechgirl.com' || inputId === 'admin')) {
             const allUsers = await getUsers();
-            user = allUsers.find((u) => u.role === Role.ADMIN || u.id === 'user-1') || null;
+            user = allUsers.find((u) => u.role === Role.ADMIN) || null;
           }
           if (!user) return null;
 
           const adminKey = process.env.ADMIN_API_KEY || 'mechgirl-admin-2026';
           const adminPassword = process.env.ADMIN_PASSWORD || 'mechgirl-admin-2026';
-          const isAdmin = user.role === Role.ADMIN || user.id === 'user-1';
+          const isAdmin = user.role === Role.ADMIN;
 
           let ok = false;
           if (user.passwordHash) {
@@ -65,7 +64,8 @@ export const authOptions: NextAuthOptions = {
       },
     }),
   ],
-  adapter: PrismaAdapter(prisma),
+  // FirestoreAdapter manages users, accounts, sessions, verificationTokens collections in Firestore
+  adapter: FirestoreAdapter(adminDb as any),
   session: {
     strategy: 'jwt',
   },

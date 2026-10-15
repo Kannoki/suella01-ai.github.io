@@ -5,8 +5,8 @@ import { motion } from 'framer-motion';
 import Layout from '../../components/Layout';
 import Modal from '../../components/Modal';
 import { AnimatedSection } from '../../components/AnimatedSection';
-import { getActivityBySlug, type Activity, getKnowledgeBySlug, type Knowledge } from '../../lib/dataService';
-import { ActivityStatus } from '../../prisma/generated/enums';
+import { getActivityBySlug, getKnowledgeBySlug } from '../../lib/dataService';
+import { ActivityStatus, type Activity, type Knowledge } from '../../lib/types';
 import { formatActivityDate } from '../../lib/dateUtils';
 import { sanitizeHtml } from '../../lib/sanitize';
 

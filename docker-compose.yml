@@ -5,34 +5,8 @@ networks:
   app_net:
     driver: bridge
 
-# ─── Volumes ────────────────────────────────────────────────────────────────
-volumes:
-  postgres_data:
-
 # ─── Services ───────────────────────────────────────────────────────────────
 services:
-
-  # ── PostgreSQL Database ──────────────────────────────────────────────────
-  postgres:
-    image: postgres:16-alpine
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
-      POSTGRES_DB: ${POSTGRES_DB:-mechgirl}
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    networks:
-      - app_net
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-mechgirl}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    # Postgres is NOT exposed to host by default for security.
-    # Uncomment the line below only if you need direct DB access from your machine:
-    # ports:
-    #   - "5432:5432"
 
   # ── Next.js Web App ──────────────────────────────────────────────────────
   web:
@@ -40,31 +14,16 @@ services:
       context: .
       dockerfile: Dockerfile
     restart: unless-stopped
-    depends_on:
-      postgres:
-        condition: service_healthy
+    env_file:
+      - .env
     environment:
-      DATABASE_URL: "postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-mechgirl}"
-      # Required: provide NEXTAUTH_SECRET / SECRET via .env (no hardcoded fallback).
-      # Without these, the auth layer will refuse all requests at runtime.
-      NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost}
-      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:-}
-      SECRET: ${SECRET:-}
-      ADMIN_API_KEY: ${ADMIN_API_KEY:-}
-      ADMIN_BOOTSTRAP_PASSWORD: ${ADMIN_BOOTSTRAP_PASSWORD:-}
-      GITHUB_ID: ${GITHUB_ID:-}
-      GITHUB_SECRET: ${GITHUB_SECRET:-}
       NODE_ENV: production
+      PORT: 3000
     networks:
       - app_net
-    # web is not exposed directly — traffic flows through Nginx
     expose:
       - "3000"
-    # Run DB migrations then start the app. We require a real migrate deploy;
-    # if migrations fail (e.g. baseline db) we surface the error rather than
-    # silently dropping/overwriting columns with `db push --accept-data-loss`.
-    command: >
-      sh -c "npx prisma migrate deploy && node server.js"
+    command: ["node", "server.js"]
 
   # ── Nginx Reverse Proxy ──────────────────────────────────────────────────
   nginx:

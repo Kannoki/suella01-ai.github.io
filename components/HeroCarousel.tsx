@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import type { CarouselSlide } from '../lib/dataService';
+import type { CarouselSlide } from '../lib/types';
 
 interface HeroCarouselProps {
   slides?: CarouselSlide[];

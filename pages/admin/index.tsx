@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import Layout from '../../components/Layout';
 import { getLoggedInUser, logoutUser } from '../../lib/clientAuth';
-import { Role } from '../../prisma/generated/enums';
+import { Role } from '../../lib/types';
 
 // Modular Tab Components
 import ActivitiesTab from '../../components/admin/ActivitiesTab';

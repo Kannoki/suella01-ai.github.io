@@ -15,10 +15,7 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# Prisma: generate client from schema before building Next.js
-RUN npx prisma generate
-
-# Build the Next.js production bundle
+# Build the Next.js production bundle (standalone output)
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build
 
@@ -35,7 +32,6 @@ RUN addgroup --system --gid 1001 nodejs && \
 
 # Copy only what Next.js needs at runtime
 COPY --from=builder /app/public           ./public
-COPY --from=builder /app/prisma           ./prisma
 COPY --from=builder /app/data             ./data
 COPY --from=builder /app/package.json     ./package.json
 
@@ -43,15 +39,9 @@ COPY --from=builder /app/package.json     ./package.json
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static     ./.next/static
 
-# Prisma client must be present at runtime, since standalone output only includes app code.
-# Generated client lives at node_modules/@prisma/client and node_modules/.prisma/client (or
-# node_modules/prisma/generated for newer versions). Copy both to be safe across versions.
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma ./node_modules/@prisma
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
-
 USER nextjs
 
 EXPOSE 3000
 
-# next start serves the standalone bundle
+# server.js starts the standalone Next.js server
 CMD ["node", "server.js"]

@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import type { Product } from '../../lib/dataService';
+import type { Product } from '../../lib/types';
 import { getAuthHeaders } from '../../lib/clientAuth';
-import { ProductCategory } from '../../prisma/generated/enums';
+import { ProductCategory } from '../../lib/types';
 
 const CATEGORY_FILTERS: (ProductCategory | 'All')[] = [
   'All',

@@ -20,7 +20,9 @@
     "incremental": true
   },
   "exclude": [
-    "node_modules"
+    "node_modules",
+    "prisma",
+    "prisma.config.ts"
   ],
   "include": [
     "next-env.d.ts",

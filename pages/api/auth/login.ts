@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getUserByEmail, getUsers, createUser, updateUser } from '../../../lib/dataService';
 import { verifyPassword, hashPassword } from '../../../lib/passwords';
-import { Role } from '../../../prisma/generated/enums';
+import { Role } from '../../../lib/dataService';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {

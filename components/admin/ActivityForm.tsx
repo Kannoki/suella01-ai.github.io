@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
-import type { Activity } from '../../lib/dataService';
+import type { Activity } from '../../lib/types';
 import { toDateInputValue, formatActivityDate } from '../../lib/dateUtils';
 import { getAuthHeaders, compressImageFile } from '../../lib/clientAuth';
-import { ActivityType, ActivityStatus } from '../../prisma/generated/enums';
+import { ActivityType, ActivityStatus } from '../../lib/types';
 
 interface ActivityFormProps {
   initialData?: Activity | null;

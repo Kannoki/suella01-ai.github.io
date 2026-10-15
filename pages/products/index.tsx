@@ -4,7 +4,8 @@ import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import Layout from '../../components/Layout';
 import { AnimatedSection } from '../../components/AnimatedSection';
-import { getProducts, type Product } from '../../lib/dataService';
+import { getProducts } from '../../lib/dataService';
+import type { Product } from '../../lib/types';
 
 export const getStaticProps: GetStaticProps = async () => {
   try {

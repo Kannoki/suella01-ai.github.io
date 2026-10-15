@@ -3,7 +3,8 @@ import type { GetServerSideProps } from 'next';
 import Link from 'next/link';
 import Layout from '../../components/Layout';
 import { AnimatedSection } from '../../components/AnimatedSection';
-import { getProductBySlug, type Product } from '../../lib/dataService';
+import { getProductBySlug } from '../../lib/dataService';
+import type { Product } from '../../lib/types';
 import { sanitizeHtml } from '../../lib/sanitize';
 
 export const getServerSideProps: GetServerSideProps = async (context) => {
