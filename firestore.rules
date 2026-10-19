@@ -56,7 +56,22 @@ service cloud.firestore {
       allow create, delete: if isAdmin();
     }
 
+    // ── Site Stats — visitor counter & presence ──────────────────────────────
+    // site_stats/global holds { totalVisits } — public increment allowed.
+    match /site_stats/{document} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // site_stats_presence holds ephemeral session docs keyed by random UUID.
+    // No sensitive data — anyone can write/delete their own presence doc.
+    match /site_stats_presence/{sessionId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
     // ── Helper: isAdmin ──────────────────────────────────────────────────────
+
     // Checks the requesting user's role field in their users/{uid} document
     function isAdmin() {
       return request.auth != null &&
